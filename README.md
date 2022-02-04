@@ -21,7 +21,8 @@ If wanted to run it sliently (i.e. without any console popup) at start up, you m
 1. Create a `shutd.vbs` at any folder
 ```
 Set WshShell = CreateObject("WScript.Shell") 
-WshShell.Run chr(34) & "%GOPATH%\shutd.exe" & Chr(34), 0
+gopath = WshShell.ExpandEnvironmentStrings("%GOPATH%")
+WshShell.Run chr(34) & gopath & "\bin\shutd.exe" & Chr(34), 0
 Set WshShell = Nothing
 ```
 
