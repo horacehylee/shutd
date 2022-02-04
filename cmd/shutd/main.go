@@ -65,8 +65,8 @@ func newConfig(log *logrus.Logger) shutdown.Config {
 
 	viper.SetDefault("startTime", "01:00")
 	viper.SetDefault("snoozeInterval", 15)
-	viper.SetDefault("notification.before", 15)
-	viper.SetDefault("notification.duration", 5)
+	viper.SetDefault("notification.before", 10)
+	viper.SetDefault("notification.duration", 10)
 
 	err := viper.ReadInConfig()
 	if err != nil {
