@@ -2,6 +2,12 @@
 
 Auto shutdown utility tool for Windows with popup and snooze features
 
+## 🔨 Build
+
+```
+go install ./cmd/shutd
+```
+
 ## 🛠 Usage
 
 Simply running `shutd` will have the process running and will auto shutdown your computer for you
@@ -15,7 +21,7 @@ If wanted to run it sliently (i.e. without any console popup) at start up, you m
 1. Create a `shutd.vbs` at any folder
 ```
 Set WshShell = CreateObject("WScript.Shell") 
-WshShell.Run chr(34) & "<$GOPATH / Installed location>\shutd.exe" & Chr(34), 0
+WshShell.Run chr(34) & "%GOPATH%\shutd.exe" & Chr(34), 0
 Set WshShell = Nothing
 ```
 
