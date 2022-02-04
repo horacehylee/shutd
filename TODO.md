@@ -1,0 +1,11 @@
+# Shutd
+
+- [x] Scheduler - daemon program to wait for scheduled time
+- [x] Trigger of windows shutdown
+- [x] Windows toast popup with snooze featue
+- [x] Toast popup 1 min before
+
+# Roadmap
+- [ ] May be include sleep/hibernate
+- [ ] Beautify popup dialog
+- [ ] Help to close all applications?
