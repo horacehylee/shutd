@@ -10,6 +10,21 @@ Simply running `shutd` will have the process running and will auto shutdown your
 shutd
 ```
 
+If wanted to run it sliently (i.e. without any console popup) at start up, you may do the following
+
+1. Create a `shutd.vbs` at any folder
+```
+Set WshShell = CreateObject("WScript.Shell") 
+WshShell.Run chr(34) & "<$GOPATH / Installed location>\shutd.exe" & Chr(34), 0
+Set WshShell = Nothing
+```
+
+2. Create a shortcut and choose `shutd.vbs` that you created as target
+
+3. Move the shortcut to start up folder, simply search `Startup` from Windows explorer
+
+4. You should be able to see `shutd.exe` running in task manager next time when it starts up
+
 ## ⚙ Configuration
 
 Following set of default configurations will be generated under home directory `%USERPROFILE%/.shutd.yaml`
