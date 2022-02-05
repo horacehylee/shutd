@@ -1,7 +1,6 @@
 package shutdown
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
@@ -10,11 +9,14 @@ import (
 )
 
 const shutdownTag = "shutdown"
-const notificationTag = "notification"
+const snoozeNotificationTag = "snoozeNotification"
 
 type scheduler struct {
 	*gocron.Scheduler
-	logger *logrus.Logger
+	logger                *logrus.Logger
+	config                Config
+	shutdownJob           *gocron.Job
+	snoozeNotificationJob *gocron.Job
 }
 
 type option func(*scheduler)
@@ -25,9 +27,10 @@ func WithLogger(logger *logrus.Logger) option {
 	}
 }
 
-func NewScheduler(options ...option) *scheduler {
+func NewScheduler(config Config, options ...option) (*scheduler, error) {
 	s := gocron.NewScheduler(time.Local)
 	s.StartAsync()
+	s.TagsUnique()
 
 	scheduler := &scheduler{
 		Scheduler: s,
@@ -36,95 +39,102 @@ func NewScheduler(options ...option) *scheduler {
 	for _, o := range options {
 		o(scheduler)
 	}
-	return scheduler
+	err := scheduler.Configure(config)
+	if err != nil {
+		return nil, err
+	}
+	return scheduler, nil
 }
 
-func (s *scheduler) Config(config Config) error {
-	s.logger.Infof("config: %#v\n", config)
+func (s *scheduler) Configure(config Config) error {
+	s.config = config
+	s.logger.Infof("config: %+v", config)
 
-	s.Clear()
-	j, err := s.Every(1).Day().At(config.StartTime).Tag(shutdownTag).Do(func() {
-		s.logger.Info("=== Shutdown ===")
-		s.printJobs()
-		shutdown()
-	})
+	var err error
+	err = s.scheduleShutdownJob(s.config.StartTime)
+	if err != nil {
+		return err
+	}
+	err = s.scheduleSnoozeNotificationJob()
 	if err != nil {
 		return err
 	}
 
-	notifyTime := j.ScheduledTime().Add(-time.Duration(config.Notification.Before) * time.Minute)
-	s.Every(1).Day().At(notifyTime).Tag(notificationTag)
-	if time.Now().After(notifyTime) {
-		s.StartImmediately()
-	}
-	_, err = s.Do(s.notifyBeforeShutdown(config))
 	s.printJobs()
-	return err
+	return nil
 }
 
-func (s *scheduler) notifyBeforeShutdown(config Config) func() {
-	return func() {
-		s.logger.Info("=== Notify before shutdown ===")
-
-		j := s.getShutdownJob()
-		if j == nil {
-			s.logger.Info("could not find shutdown job")
-			return
-		}
-
-		title := fmt.Sprintf("Shutd - Scheduled Shutdown at %v", j.ScheduledAtTime())
-		text := fmt.Sprintf("About to shutdown in %v minutes, wanted to snooze?", config.Notification.Before)
-		yes, err := question(title, text, 2*time.Minute)
-		if err != nil && !errors.Is(err, questionTimeoutError) {
-			s.logger.Errorf("failed to notify before shutdown: %v", err)
-			return
-		}
-		if yes {
-			err := s.delay(config.SnoozeInterval)
-			if err != nil {
-				s.logger.Errorf("failed to delay: %v", err)
-			}
-		}
-		s.printJobs()
-	}
-}
-
-func (s *scheduler) delay(interval int) error {
-	jobs := s.Jobs()
-	if len(jobs) == 0 {
-		return fmt.Errorf("no scheduled job for scheduler")
-	}
-	for _, j := range jobs {
-		delayedTime := j.ScheduledTime().Add(time.Duration(interval) * time.Minute)
-		_, err := s.Job(j).At(delayedTime).Update()
+func (s *scheduler) scheduleShutdownJob(shutdownTime interface{}) error {
+	if s.shutdownJob == nil {
+		j, err := s.Every(1).Day().At(shutdownTime).Tag(shutdownTag).Do(s.newShutdownTask())
 		if err != nil {
-			return fmt.Errorf("failed to delay job %w", err)
+			// not wrapping error to expose implementation details
+			return fmt.Errorf("failed to schedule shutdown job: %v", err)
+		}
+		s.shutdownJob = j
+	} else {
+		_, err := s.Job(s.shutdownJob).At(shutdownTime).Update()
+		if err != nil {
+			// not wrapping error to expose implementation details
+			return fmt.Errorf("failed to update scheduled shutdown job: %v", err)
 		}
 	}
+	return nil
+}
+
+func (s *scheduler) scheduleSnoozeNotificationJob() error {
+	if s.shutdownJob == nil {
+		return fmt.Errorf("shutdown job is not scheduled yet")
+	}
+
+	notifyTime := s.shutdownJob.ScheduledTime().Add(-time.Duration(s.config.Notification.Before) * time.Minute)
+	if s.snoozeNotificationJob == nil {
+		s.Every(1).Day().At(notifyTime).Tag(snoozeNotificationTag)
+		if time.Now().After(notifyTime) {
+			s.StartImmediately()
+		}
+		j, err := s.Do(s.newSnoozeNotificationTask())
+		if err != nil {
+			// not wrapping error to expose implementation details
+			return fmt.Errorf("failed to schedule snooze notification job: %v", err)
+		}
+		s.snoozeNotificationJob = j
+	} else {
+		s.Job(s.snoozeNotificationJob).At(notifyTime)
+		if time.Now().After(notifyTime) {
+			s.StartImmediately()
+		}
+		_, err := s.Update()
+		if err != nil {
+			// not wrapping error to expose implementation details
+			return fmt.Errorf("failed to update scheduled snooze notification job: %v", err)
+		}
+	}
+	return nil
+}
+
+func (s *scheduler) snooze(interval int) error {
+	if s.shutdownJob == nil {
+		return fmt.Errorf("shutdown job is not scheduled")
+	}
+	var err error
+
+	delayedTime := s.shutdownJob.ScheduledTime().Add(time.Duration(interval) * time.Minute)
+	err = s.scheduleShutdownJob(delayedTime)
+	if err != nil {
+		return err
+	}
+	err = s.scheduleSnoozeNotificationJob()
+	if err != nil {
+		return err
+	}
+
 	s.printJobs()
 	return nil
-}
-
-func (s *scheduler) getShutdownJob() *gocron.Job {
-	for _, j := range s.Jobs() {
-		if contains(j.Tags(), shutdownTag) {
-			return j
-		}
-	}
-	return nil
-}
-
-func contains(s []string, e string) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
 }
 
 func (s *scheduler) printJobs() {
 	for _, j := range s.Jobs() {
-		s.logger.Infof("job: %v, scheduled: %v (%v)\n", j.Tags(), j.ScheduledAtTime(), j.ScheduledTime())
+		s.logger.Infof("job: %v, scheduled: %v (%v)", j.Tags(), j.ScheduledAtTime(), j.ScheduledTime())
 	}
 }

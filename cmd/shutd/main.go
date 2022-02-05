@@ -3,9 +3,10 @@ package main
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
+	"os/signal"
 	"path"
+	"syscall"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/horacehylee/shutd/pkg/shutdown"
@@ -21,19 +22,20 @@ func main() {
 	log.Info("Started")
 	log.Info("==========================")
 
-	s := shutdown.NewScheduler(shutdown.WithLogger(log))
 	config := newConfig(log)
-	err := s.Config(config)
+	s, err := shutdown.NewScheduler(config, shutdown.WithLogger(log))
 	if err != nil {
-		log.Fatalf("failed to apply config: %w", err)
+		log.Fatalf("failed create scheduler: %w", err)
 	}
 
 	watchConfig(log, func(config shutdown.Config) {
-		err := s.Config(config)
+		err := s.Configure(config)
 		if err != nil {
-			log.Fatalf("failed to apply config: %w", err)
+			log.Fatalf("failed to apply updated config: %w", err)
 		}
 	})
+
+	watchExit(log)
 
 	// Block
 	<-make(chan bool)
@@ -75,7 +77,7 @@ func newConfig(log *logrus.Logger) shutdown.Config {
 			log.Fatal(fmt.Errorf("could not read config: %w", err))
 		}
 	}
-	config := parseConfig()
+	config := parseConfig(log)
 
 	err = viper.SafeWriteConfig()
 	if err != nil {
@@ -92,17 +94,29 @@ func watchConfig(log *logrus.Logger, configFunc func(config shutdown.Config)) {
 		log.Info("==========================")
 		log.Info("Config file changed:", e.Name)
 		log.Info("==========================")
-		config := parseConfig()
+		config := parseConfig(log)
 		configFunc(config)
 	})
 	viper.WatchConfig()
 }
 
-func parseConfig() shutdown.Config {
+func parseConfig(log *logrus.Logger) shutdown.Config {
 	var config shutdown.Config
 	err := viper.Unmarshal(&config)
 	if err != nil {
 		log.Fatal(fmt.Errorf("failed to parse config: %w", err))
 	}
 	return config
+}
+
+func watchExit(log *logrus.Logger) {
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigs
+		log.Info("==========================")
+		log.Info("Exited")
+		log.Info("==========================")
+		os.Exit(0)
+	}()
 }
