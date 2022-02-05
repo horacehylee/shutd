@@ -1,5 +1,6 @@
 package shutdown
 
+// Config for shutdown scheduler
 type Config struct {
 	SnoozeInterval int
 	StartTime      string

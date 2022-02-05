@@ -11,30 +11,41 @@ import (
 const shutdownTag = "shutdown"
 const snoozeNotificationTag = "snoozeNotification"
 
+// Scheduler for auto shutdown the computer
+type Scheduler interface {
+	Configure(config Config) error
+	Snooze() error
+	ShutdownTimeChangedChan() chan time.Time
+}
+
 type scheduler struct {
 	*gocron.Scheduler
-	logger                *logrus.Logger
-	config                Config
-	shutdownJob           *gocron.Job
-	snoozeNotificationJob *gocron.Job
+	logger                  *logrus.Logger
+	config                  Config
+	shutdownJob             *gocron.Job
+	snoozeNotificationJob   *gocron.Job
+	shutdownTimeChangedChan chan time.Time
 }
 
 type option func(*scheduler)
 
+// WithLogger option to allow passing of custom logger
 func WithLogger(logger *logrus.Logger) option {
 	return func(s *scheduler) {
 		s.logger = logger
 	}
 }
 
-func NewScheduler(config Config, options ...option) (*scheduler, error) {
+// NewScheduler to create scheduler to shutdown the computer
+func NewScheduler(config Config, options ...option) (Scheduler, error) {
 	s := gocron.NewScheduler(time.Local)
 	s.StartAsync()
 	s.TagsUnique()
 
 	scheduler := &scheduler{
-		Scheduler: s,
-		logger:    logrus.New(),
+		Scheduler:               s,
+		logger:                  logrus.New(),
+		shutdownTimeChangedChan: make(chan time.Time, 1),
 	}
 	for _, o := range options {
 		o(scheduler)
@@ -46,12 +57,38 @@ func NewScheduler(config Config, options ...option) (*scheduler, error) {
 	return scheduler, nil
 }
 
+// Configure scheduler for updated config
 func (s *scheduler) Configure(config Config) error {
 	s.config = config
 	s.logger.Infof("config: %+v", config)
 
 	var err error
 	err = s.scheduleShutdownJob(s.config.StartTime)
+	if err != nil {
+		return err
+	}
+	err = s.scheduleSnoozeNotificationJob()
+	if err != nil {
+		return err
+	}
+
+	s.printJobs()
+	return nil
+}
+
+// ShutdownTimeChangedChan get channel of latest shutdown time
+func (s *scheduler) ShutdownTimeChangedChan() chan time.Time {
+	return s.shutdownTimeChangedChan
+}
+
+// Snooze to delay shutdown time for the computer
+func (s *scheduler) Snooze() error {
+	if s.shutdownJob == nil {
+		return fmt.Errorf("shutdown job is not scheduled")
+	}
+	var err error
+	delayedTime := s.shutdownJob.ScheduledTime().Add(time.Duration(s.config.SnoozeInterval) * time.Minute)
+	err = s.scheduleShutdownJob(delayedTime)
 	if err != nil {
 		return err
 	}
@@ -78,6 +115,11 @@ func (s *scheduler) scheduleShutdownJob(shutdownTime interface{}) error {
 			// not wrapping error to expose implementation details
 			return fmt.Errorf("failed to update scheduled shutdown job: %v", err)
 		}
+	}
+	select {
+	case s.shutdownTimeChangedChan <- s.shutdownJob.ScheduledTime():
+	default:
+		// in case no one is waiting for the channel
 	}
 	return nil
 }
@@ -110,26 +152,6 @@ func (s *scheduler) scheduleSnoozeNotificationJob() error {
 			return fmt.Errorf("failed to update scheduled snooze notification job: %v", err)
 		}
 	}
-	return nil
-}
-
-func (s *scheduler) snooze(interval int) error {
-	if s.shutdownJob == nil {
-		return fmt.Errorf("shutdown job is not scheduled")
-	}
-	var err error
-
-	delayedTime := s.shutdownJob.ScheduledTime().Add(time.Duration(interval) * time.Minute)
-	err = s.scheduleShutdownJob(delayedTime)
-	if err != nil {
-		return err
-	}
-	err = s.scheduleSnoozeNotificationJob()
-	if err != nil {
-		return err
-	}
-
-	s.printJobs()
 	return nil
 }
 

@@ -27,7 +27,7 @@ func (s *scheduler) newSnoozeNotificationTask() func() {
 		}
 		s.logger.Infof("snooze is required: %v", yes)
 		if yes {
-			err := s.snooze(s.config.SnoozeInterval)
+			err := s.Snooze()
 			if err != nil {
 				s.logger.Errorf("failed to snooze: %v", err)
 			}

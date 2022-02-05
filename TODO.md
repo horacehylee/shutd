@@ -5,7 +5,7 @@
 - [x] Windows toast popup with snooze featue
 - [x] Toast popup 1 min before
 - [x] Bug: delay after notification, it should notify again
-- [ ] tray icon, to have option to delay it any time and view shutdown time
+- [x] tray icon, to have option to delay it any time and view shutdown time
 
 # Roadmap
 - [ ] May be include sleep/hibernate

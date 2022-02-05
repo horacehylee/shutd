@@ -9,6 +9,8 @@ import (
 	"syscall"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/getlantern/systray"
+	"github.com/horacehylee/shutd/cmd/shutd/icon"
 	"github.com/horacehylee/shutd/pkg/shutdown"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -37,8 +39,7 @@ func main() {
 
 	watchExit(log)
 
-	// Block
-	<-make(chan bool)
+	startSystray(log, s)
 }
 
 func newLogger() (*os.File, *logrus.Logger) {
@@ -109,14 +110,53 @@ func parseConfig(log *logrus.Logger) shutdown.Config {
 	return config
 }
 
+func exit(log *logrus.Logger) {
+	log.Info("==========================")
+	log.Info("Exited")
+	log.Info("==========================")
+}
+
 func watchExit(log *logrus.Logger) {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigs
-		log.Info("==========================")
-		log.Info("Exited")
-		log.Info("==========================")
+		exit(log)
 		os.Exit(0)
 	}()
+}
+
+func startSystray(log *logrus.Logger, s shutdown.Scheduler) {
+	onReady := func() {
+		systray.SetTemplateIcon(icon.Data, icon.Data)
+		systray.SetTitle("Shutd")
+		systray.SetTooltip("Shutd")
+		shutdownTimeItem := systray.AddMenuItem("Shutdown at ?", "Shutdown at ?")
+		systray.AddSeparator()
+		snoozeItem := systray.AddMenuItem("Snooze", "Snooze shutdown")
+		quitItem := systray.AddMenuItem("Quit", "Quit the whole app")
+
+		shutdownTimeItem.Disable()
+
+		go func() {
+			for {
+				select {
+				case t := <-s.ShutdownTimeChangedChan():
+					title := fmt.Sprintf("Shutdown at %v", t.Format("15:04"))
+					shutdownTimeItem.SetTitle(title)
+					shutdownTimeItem.SetTooltip(title)
+				case <-snoozeItem.ClickedCh:
+					s.Snooze()
+				case <-quitItem.ClickedCh:
+					systray.Quit()
+					return
+				}
+			}
+		}()
+	}
+
+	onExit := func() {
+		exit(log)
+	}
+	systray.Run(onReady, onExit)
 }
