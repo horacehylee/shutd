@@ -15,11 +15,12 @@ func (s *scheduler) newSnoozeNotificationTask() func() {
 		s.logger.Info("Snooze notification")
 		s.logger.Info("==========================")
 
-		title := fmt.Sprintf("Shutd - Scheduled Shutdown at %v", s.shutdownJob.ScheduledAtTime())
-		text := fmt.Sprintf("About to shutdown in %v minutes, wanted to snooze for %v minutes?", s.config.Notification.Before, s.config.SnoozeInterval)
+		shutdownTime := s.shutdownJob.ScheduledTime()
+		title := fmt.Sprintf("Shutd - Scheduled Shutdown at %v", shutdownTime.Format("15:04"))
+		text := fmt.Sprintf("About to shutdown in %.0f minutes, wanted to snooze for %v minutes?", time.Until(shutdownTime).Minutes(), s.config.SnoozeInterval)
+
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.config.Notification.Duration)*time.Minute)
 		defer cancel()
-
 		yes, err := question(ctx, title, text)
 		if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 			s.logger.Errorf("failed to display snooze notification: %v", err)

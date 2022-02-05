@@ -157,6 +157,6 @@ func (s *scheduler) scheduleSnoozeNotificationJob() error {
 
 func (s *scheduler) printJobs() {
 	for _, j := range s.Jobs() {
-		s.logger.Infof("job: %v, scheduled: %v (%v)", j.Tags(), j.ScheduledAtTime(), j.ScheduledTime())
+		s.logger.Infof("job: %v, scheduled: %v (%v)", j.Tags(), j.ScheduledTime().Format("15:04"), j.ScheduledTime())
 	}
 }
