@@ -55,6 +55,14 @@ Log file will be generated under you home directory `%USERPROFILE%/.shutd.log`
 
 Troubleshoot error there if wanted
 
+## 🚢 Release
+
+```
+go get github.com/mitchellh/gox
+
+gox -os=windows -ldflags -H=windowsgui -output ./build/{{.Dir}}_{{.OS}}_{{.Arch}} ./cmd/shutd
+```
+
 ## 📜 License
 
 Distributed under the MIT License. See [LICENSE](./LICENSE) for more information.
