@@ -58,7 +58,7 @@ Troubleshoot error there if wanted
 ## 🚢 Release
 
 ```
-go get github.com/mitchellh/gox
+go install github.com/mitchellh/gox@latest
 
 gox -os=windows -ldflags -H=windowsgui -output ./build/{{.Dir}}_{{.OS}}_{{.Arch}} ./cmd/shutd
 ```
