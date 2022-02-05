@@ -2,6 +2,8 @@
 
 Auto shutdown utility tool for Windows with popup and snooze features
 
+![Screenshot](./screenshot.png)
+
 ## 🔨 Build
 
 `-ldflags -H=windowsgui` compile flags is to avoid opening a console at application startup
