@@ -33,4 +33,6 @@ jobs:
         run: go test -race -coverprofile=coverage.txt -covermode=atomic ./pkg/...
 
       - name: Send coverage
-        run: bash <(curl -s https://codecov.io/bash)
+        uses: codecov/codecov-action@v2
+        with:
+          files: ./coverage.txt
