@@ -14,19 +14,23 @@ go install -ldflags -H=windowsgui ./cmd/shutd
 
 ## 🛠 Usage
 
-Simply running `shutd` will have the process running and will auto shutdown your computer for you
+If wanted to run it sliently (i.e. without any console popup) at start up, you may do the following
 
+(Not sure why simply running `shutd.exe` in Startup with `-ldflags -H=windowsgui` could not trigger the shutdown properly)
+
+1. Create a `shutd.vbs` at any folder
 ```
-shutd
+Set WshShell = CreateObject("WScript.Shell") 
+gopath = WshShell.ExpandEnvironmentStrings("%GOPATH%")
+WshShell.Run chr(34) & gopath & "\bin\shutd.exe" & Chr(34), 0
+Set WshShell = Nothing
 ```
 
-To run when computer startup
+2. Create a shortcut and choose `shutd.vbs` that you created as target
 
-1. Navigate to `%GOPATH%/bin` and create a shortcut for `shutd.exe`
+3. Move the shortcut to start up folder, simply search `Startup` from Windows explorer
 
-2. Move the shortcut to start up folder, simply search `Startup` from Windows explorer
-
-3. You should be able to see `shutd.exe` running in task manager next time when it starts up
+4. You should be able to see `shutd.exe` running in task manager next time when it starts up
 
 ## ⚙ Configuration
 
