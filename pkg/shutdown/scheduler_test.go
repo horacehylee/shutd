@@ -163,16 +163,8 @@ func TestSnoozeNotificationTaskWithError(t *testing.T) {
 
 	select {
 	case <-called:
-		equal := false
-		for i := 0; i < 10; i++ {
-			equal = assert.Equal(t, hook.LastEntry().Message, "failed to execute snooze notification task: testing error")
-			if !equal {
-				time.Sleep(100 * time.Millisecond)
-			}
-		}
-		if !equal {
-			t.Fatal("error is not thrown for snooze notification task")
-		}
+		time.Sleep(100 * time.Millisecond)
+		assert.Equal(t, hook.LastEntry().Message, "failed to execute snooze notification task: testing error")
 	case <-time.After(2 * time.Second):
 		t.Fatal("snoozeNotificationTask should be called")
 	}
@@ -210,16 +202,8 @@ func TestShutdownTaskWithError(t *testing.T) {
 
 	select {
 	case <-called:
-		equal := false
-		for i := 0; i < 10; i++ {
-			equal = assert.Equal(t, hook.LastEntry().Message, "failed to execute shutdown task: testing error")
-			if !equal {
-				time.Sleep(100 * time.Millisecond)
-			}
-		}
-		if !equal {
-			t.Fatal("error is not thrown for shutdown task")
-		}
+		time.Sleep(100 * time.Millisecond)
+		assert.Equal(t, hook.LastEntry().Message, "failed to execute shutdown task: testing error")
 	case <-time.After(2 * time.Second):
 		t.Fatal("shutdownTask should be called")
 	}
