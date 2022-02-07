@@ -30,9 +30,7 @@ jobs:
           restore-keys: ${{ runner.os }}-go-
 
       - name: Test
-        run: go test -v -race -coverprofile=coverage.txt ./pkg/...
+        run: go test -race -coverprofile=coverage.txt -covermode=atomic ./pkg/...
 
       - name: Send coverage
-        uses: codecov/codecov-action@v2
-        with:
-          files: ./coverage.txt
+        run: bash <(curl -s https://codecov.io/bash)
