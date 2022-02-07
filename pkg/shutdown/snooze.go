@@ -9,30 +9,29 @@ import (
 	"github.com/gen2brain/dlgs"
 )
 
-func (s *scheduler) newSnoozeNotificationTask() func() {
-	return func() {
-		s.logger.Info("==========================")
-		s.logger.Info("Snooze notification")
-		s.logger.Info("==========================")
-
-		shutdownTime := s.shutdownJob.ScheduledTime()
+func newNotificationSnoozeTask() SchedulerTask {
+	return func(s *Scheduler) error {
+		shutdownTime, err := s.ShutdownTime()
+		if err != nil {
+			return err
+		}
 		title := fmt.Sprintf("Shutd - Scheduled Shutdown at %v", shutdownTime.Format("15:04"))
-		text := fmt.Sprintf("About to shutdown in %.0f minutes, wanted to snooze for %v minutes?", time.Until(shutdownTime).Minutes(), s.config.SnoozeInterval)
+		text := fmt.Sprintf("About to shutdown in %.0f minutes, wanted to snooze for %v minutes?", time.Until(shutdownTime).Minutes(), s.Config().SnoozeInterval)
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.config.Notification.Duration)*time.Minute)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.Config().Notification.Duration)*time.Minute)
 		defer cancel()
 		yes, err := question(ctx, title, text)
 		if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
-			s.logger.Errorf("failed to display snooze notification: %v", err)
-			return
+			return fmt.Errorf("failed to display snooze notification: %v", err)
 		}
-		s.logger.Infof("snooze is required: %v", yes)
+		s.Logger().Infof("snooze is required: %v", yes)
 		if yes {
 			err := s.Snooze()
 			if err != nil {
-				s.logger.Errorf("failed to snooze: %v", err)
+				return err
 			}
 		}
+		return nil
 	}
 }
 

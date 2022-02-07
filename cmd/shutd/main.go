@@ -126,7 +126,7 @@ func watchExit(log *logrus.Logger) {
 	}()
 }
 
-func startSystray(log *logrus.Logger, s shutdown.Scheduler) {
+func startSystray(log *logrus.Logger, s *shutdown.Scheduler) {
 	onReady := func() {
 		systray.SetTemplateIcon(icon.Data, icon.Data)
 		systray.SetTitle("Shutd")
