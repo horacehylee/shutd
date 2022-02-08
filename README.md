@@ -1,6 +1,6 @@
 # 🛑 Shutd
 
-Auto shutdown utility tool for Windows with popup and snooze features
+> Auto shutdown utility tool for Windows with popup and snooze features
 
 ![Screenshot](./screenshot.png)
 
