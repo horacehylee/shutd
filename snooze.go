@@ -1,4 +1,4 @@
-package shutdown
+package shutd
 
 import (
 	"context"

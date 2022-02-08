@@ -10,8 +10,8 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/getlantern/systray"
+	"github.com/horacehylee/shutd"
 	"github.com/horacehylee/shutd/cmd/shutd/icon"
-	"github.com/horacehylee/shutd/pkg/shutdown"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -25,12 +25,12 @@ func main() {
 	log.Info("==========================")
 
 	config := newConfig(log)
-	s, err := shutdown.NewScheduler(config, shutdown.WithLogger(log))
+	s, err := shutd.NewScheduler(config, shutd.WithLogger(log))
 	if err != nil {
 		log.Fatalf("failed create scheduler: %w", err)
 	}
 
-	watchConfig(log, func(config shutdown.Config) {
+	watchConfig(log, func(config shutd.Config) {
 		err := s.Configure(config)
 		if err != nil {
 			log.Fatalf("failed to apply updated config: %w", err)
@@ -61,7 +61,7 @@ func newLogger() (*os.File, *logrus.Logger) {
 	return file, log
 }
 
-func newConfig(log *logrus.Logger) shutdown.Config {
+func newConfig(log *logrus.Logger) shutd.Config {
 	viper.SetConfigName(".shutd")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath("$HOME")
@@ -90,7 +90,7 @@ func newConfig(log *logrus.Logger) shutdown.Config {
 	return config
 }
 
-func watchConfig(log *logrus.Logger, configFunc func(config shutdown.Config)) {
+func watchConfig(log *logrus.Logger, configFunc func(config shutd.Config)) {
 	viper.OnConfigChange(func(e fsnotify.Event) {
 		log.Info("==========================")
 		log.Info("Config file changed:", e.Name)
@@ -101,8 +101,8 @@ func watchConfig(log *logrus.Logger, configFunc func(config shutdown.Config)) {
 	viper.WatchConfig()
 }
 
-func parseConfig(log *logrus.Logger) shutdown.Config {
-	var config shutdown.Config
+func parseConfig(log *logrus.Logger) shutd.Config {
+	var config shutd.Config
 	err := viper.Unmarshal(&config)
 	if err != nil {
 		log.Fatal(fmt.Errorf("failed to parse config: %w", err))
@@ -126,7 +126,7 @@ func watchExit(log *logrus.Logger) {
 	}()
 }
 
-func startSystray(log *logrus.Logger, s *shutdown.Scheduler) {
+func startSystray(log *logrus.Logger, s *shutd.Scheduler) {
 	onReady := func() {
 		systray.SetTemplateIcon(icon.Data, icon.Data)
 		systray.SetTitle("Shutd")
