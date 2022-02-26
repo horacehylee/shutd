@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"time"
-
-	"github.com/gen2brain/dlgs"
 )
 
 func newNotificationSnoozeTask() SchedulerTask {
@@ -32,23 +30,5 @@ func newNotificationSnoozeTask() SchedulerTask {
 			}
 		}
 		return nil
-	}
-}
-
-func question(ctx context.Context, title, text string) (bool, error) {
-	type result struct {
-		yes bool
-		err error
-	}
-	chanResult := make(chan result, 1)
-	go func() {
-		yes, err := dlgs.Question(title, text, true)
-		chanResult <- result{yes, err}
-	}()
-	select {
-	case res := <-chanResult:
-		return res.yes, res.err
-	case <-ctx.Done():
-		return false, ctx.Err()
 	}
 }
