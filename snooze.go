@@ -13,8 +13,8 @@ func newNotificationSnoozeTask() SchedulerTask {
 		if err != nil {
 			return err
 		}
-		title := fmt.Sprintf("Shutd - Scheduled Shutdown at %v", shutdownTime.Format("15:04"))
-		text := fmt.Sprintf("About to shutdown in %.0f minutes, wanted to snooze for %v minutes?", time.Until(shutdownTime).Minutes(), s.Config().SnoozeInterval)
+		title := fmt.Sprintf("Shutd - Shutdown at %v", shutdownTime.Format("15:04"))
+		text := fmt.Sprintf("Shutdown in %.0f minutes, snooze for %v minutes?", time.Until(shutdownTime).Minutes(), s.Config().SnoozeInterval)
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.Config().Notification.Duration)*time.Minute)
 		defer cancel()
