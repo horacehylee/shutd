@@ -80,6 +80,9 @@ func init() {
 }
 
 func question(ctx context.Context, title, text string) (bool, error) {
+	titleLab.SetText(title)
+	descLab.SetText(text)
+
 	w.Show()
 	select {
 	case res := <-chanResult:
