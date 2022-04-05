@@ -84,6 +84,8 @@ func question(ctx context.Context, title, text string) (bool, error) {
 	descLab.SetText(text)
 
 	w.Show()
+	w32.BringWindowToTop(w.Handle())
+
 	select {
 	case res := <-chanResult:
 		clearChannel(chanResult)
