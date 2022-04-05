@@ -146,7 +146,10 @@ func startSystray(log *logrus.Logger, s *shutd.Scheduler) {
 					shutdownTimeItem.SetTitle(title)
 					shutdownTimeItem.SetTooltip(title)
 				case <-snoozeItem.ClickedCh:
-					s.Snooze()
+					err := s.Snooze()
+					if err != nil {
+						log.Errorf("failed to snooze: %v", err)
+					}
 				case <-quitItem.ClickedCh:
 					systray.Quit()
 					return

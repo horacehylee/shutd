@@ -184,9 +184,9 @@ func (s *Scheduler) scheduleSnoozeNotificationJob() error {
 
 	notifyTime := s.shutdownJob.ScheduledTime().Add(-time.Duration(s.config.Notification.Before) * time.Minute)
 	if s.snoozeNotificationJob == nil {
-		s.scheduler.Every(1).Day().At(notifyTime).Tag(snoozeNotificationTag)
+		s.scheduler.Every(1).Day().StartAt(notifyTime).Tag(snoozeNotificationTag)
 	} else {
-		s.scheduler.Job(s.snoozeNotificationJob).At(notifyTime)
+		s.scheduler.Job(s.snoozeNotificationJob).StartAt(notifyTime)
 	}
 
 	if time.Now().After(notifyTime) {
@@ -220,6 +220,6 @@ func (s *Scheduler) scheduleSnoozeNotificationJob() error {
 
 func (s *Scheduler) printJobs() {
 	for _, j := range s.scheduler.Jobs() {
-		s.logger.Infof("job: %v, scheduled: %v (%v)", j.Tags(), j.ScheduledTime().Format("15:04"), j.ScheduledTime())
+		s.logger.Infof("job: %v, scheduled: %v (%v), nextRun: %v (%v), count: %v", j.Tags(), j.ScheduledTime().Format("15:04"), j.ScheduledTime(), j.NextRun().Format("15:04"), j.NextRun(), j.RunCount())
 	}
 }

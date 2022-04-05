@@ -149,6 +149,53 @@ func TestSnoozeNotificationStillTriggerBeforeShutdown(t *testing.T) {
 	}
 }
 
+func TestSnoozeNotificationCanTriggeredAfterRescheduled(t *testing.T) {
+	times := 0
+	called := make(chan bool)
+	snoozeNotificationTask := func(s *Scheduler) error {
+		times++
+		called <- true
+		return nil
+	}
+	config := getConfigWithShutdownTime(time.Now().Add(3 * time.Minute).Format("15:04"))
+	s, err := getSchedulerWithConfig(t, config, WithSnoozeNotificationTask(snoozeNotificationTask))
+	assert.NoError(t, err)
+
+	select {
+	case <-called:
+	case <-time.After(2 * time.Second):
+		t.Fatal("snoozeNotificationTask should be called")
+	}
+
+	err = s.Snooze()
+	assert.NoError(t, err)
+
+	config2 := getConfigWithShutdownTime(time.Now().Add(5 * time.Minute).Format("15:04"))
+	err = s.Configure(config2)
+	assert.NoError(t, err)
+
+	select {
+	case <-called:
+	case <-time.After(2 * time.Second):
+		t.Fatal("snoozeNotificationTask should be called twice")
+	}
+
+	err = s.Snooze()
+	assert.NoError(t, err)
+
+	config3 := getConfigWithShutdownTime(time.Now().Add(5 * time.Minute).Format("15:04"))
+	err = s.Configure(config3)
+	assert.NoError(t, err)
+
+	select {
+	case <-called:
+	case <-time.After(2 * time.Second):
+		t.Fatal("snoozeNotificationTask should be called twice")
+	}
+
+	assert.Equal(t, 3, times)
+}
+
 func TestSnoozeNotificationTaskWithError(t *testing.T) {
 	testLogger, hook := test.NewNullLogger()
 
