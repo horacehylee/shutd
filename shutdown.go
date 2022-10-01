@@ -12,7 +12,7 @@ func newShutdownTask() SchedulerTask {
 }
 
 func execShutdown() (err error) {
-	if err := exec.Command("cmd", "/C", "shutdown", "/sg", "/t", "0").Run(); err != nil {
+	if err := exec.Command("cmd", "/C", "shutdown", "/t", "0", "/s", "/hybrid").Run(); err != nil {
 		return fmt.Errorf("failed to initiate shutdown: %w", err)
 	}
 	return nil
