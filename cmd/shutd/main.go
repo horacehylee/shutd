@@ -127,8 +127,22 @@ func watchExit(log *logrus.Logger) {
 }
 
 func startSystray(log *logrus.Logger, s *shutd.Scheduler) {
+	appsDark := appsUseDarkTheme()
+	if appsDark {
+		log.Info("apps theme: dark, menus forced dark")
+	} else {
+		log.Info("apps theme: light, menus stay light")
+	}
+	enableDarkMenus(appsDark)
 	onReady := func() {
-		systray.SetTemplateIcon(icon.Data, icon.Data)
+		allowDarkModeForTrayWindow()
+		if taskbarUsesLightTheme() {
+			log.Info("taskbar theme: light, apply icon-light.png")
+			systray.SetIcon(icon.DataLight)
+		} else {
+			log.Info("taskbar theme: dark, apply icon-dark.png")
+			systray.SetIcon(icon.DataDark)
+		}
 		systray.SetTitle("Shutd")
 		systray.SetTooltip("Shutd")
 		shutdownTimeItem := systray.AddMenuItem("Shutdown at ?", "Shutdown at ?")
