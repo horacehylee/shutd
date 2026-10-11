@@ -36,6 +36,9 @@ pub struct Schedule {
     pub shutdown_at: DateTime<Local>,
     pub snoozed: u32,
     pub toast: Option<ToastState>,
+    /// The shutdown time whose toast the user (or a timeout) dismissed;
+    /// dismissal is sticky until the shutdown time moves.
+    pub dismissed_for: Option<DateTime<Local>>,
 }
 
 impl Schedule {
@@ -48,6 +51,7 @@ impl Schedule {
             shutdown_at: next_occurrence(&config.start_time, now)?,
             snoozed: 0,
             toast: None,
+            dismissed_for: None,
         })
     }
 
@@ -57,6 +61,7 @@ impl Schedule {
         self.shutdown_at += Duration::minutes(i64::from(config.snooze_interval));
         self.snoozed += 1;
         self.toast = None;
+        self.dismissed_for = None;
     }
 
     /// Replaces the schedule after a config change; snooze state resets.
@@ -68,6 +73,7 @@ impl Schedule {
         self.shutdown_at = next_occurrence(&config.start_time, now)?;
         self.snoozed = 0;
         self.toast = None;
+        self.dismissed_for = None;
         Ok(())
     }
 
@@ -78,6 +84,9 @@ impl Schedule {
     /// Shows the toast once per shutdown time inside the notify window.
     pub fn toast_due(&mut self, config: &Config, now: DateTime<Local>) -> Option<DateTime<Local>> {
         if now < self.notify_at(config) || now >= self.shutdown_at {
+            return None;
+        }
+        if self.dismissed_for == Some(self.shutdown_at) {
             return None;
         }
         if self.toast.map(|t| t.shown_for) == Some(self.shutdown_at) {
@@ -96,6 +105,7 @@ impl Schedule {
         match self.toast {
             Some(t) if now >= t.dismiss_at => {
                 self.toast = None;
+                self.dismissed_for = Some(self.shutdown_at);
                 true
             }
             _ => false,
@@ -142,6 +152,7 @@ mod tests {
                 shown_for: at(2026, 10, 12, 1, 0),
                 dismiss_at: at(2026, 10, 12, 0, 59),
             }),
+            dismissed_for: None,
         };
         schedule.snooze(&cfg);
         assert_eq!(schedule.shutdown_at, at(2026, 10, 12, 1, 15));
@@ -156,6 +167,7 @@ mod tests {
             shutdown_at: at(2026, 10, 12, 1, 15),
             snoozed: 2,
             toast: None,
+            dismissed_for: None,
         };
         let now = at(2026, 10, 11, 8, 0);
         schedule.reconfigure_at(&cfg, now).unwrap();
@@ -171,6 +183,7 @@ mod tests {
             shutdown_at: at(2026, 10, 12, 1, 0),
             snoozed: 0,
             toast: None,
+            dismissed_for: None,
         };
         let early = at(2026, 10, 11, 22, 0);
         assert_eq!(schedule.toast_due(&cfg, early), None);
@@ -182,6 +195,25 @@ mod tests {
 
         assert!(!schedule.toast_expired(at(2026, 10, 12, 1, 1)));
         assert!(schedule.toast_expired(at(2026, 10, 12, 1, 2)));
+        assert_eq!(schedule.toast_due(&cfg, at(2026, 10, 12, 1, 2)), None, "expiry is sticky");
+    }
+
+    #[test]
+    fn dismiss_stays_dismissed_until_shutdown_moves() {
+        let cfg = config("01:00");
+        let mut schedule = Schedule {
+            shutdown_at: at(2026, 10, 12, 1, 0),
+            snoozed: 0,
+            toast: None,
+            dismissed_for: None,
+        };
+        assert!(schedule.toast_due(&cfg, at(2026, 10, 12, 0, 52)).is_some());
+        schedule.dismissed_for = Some(schedule.shutdown_at);
+        schedule.toast = None;
+        assert_eq!(schedule.toast_due(&cfg, at(2026, 10, 12, 0, 54)), None, "dismiss is sticky");
+
+        schedule.snooze(&cfg);
+        assert!(schedule.toast_due(&cfg, at(2026, 10, 12, 1, 6)).is_some(), "snooze re-arms");
     }
 
 }

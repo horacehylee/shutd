@@ -1,9 +1,7 @@
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 
-use serde::Serialize;
 use tauri::{AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, WebviewWindow, WindowEvent};
 use tauri_plugin_positioner::{Position, WindowExt};
 
@@ -12,18 +10,9 @@ use crate::webview_memory;
 pub const WINDOW: &str = "main";
 pub const PANEL_WIDTH: f64 = 320.0;
 pub const PANEL_HEIGHT: f64 = 272.0;
-pub const TOAST_WIDTH: f64 = 340.0;
-pub const TOAST_HEIGHT: f64 = 132.0;
 const TOAST_MARGIN: f64 = 16.0;
 const TOAST_BOTTOM_CLEARANCE: f64 = 56.0; // above the taskbar
 const BLUR_DISMISS_DELAY: Duration = Duration::from_millis(100);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Mode {
-    Panel,
-    Toast,
-}
 
 /// Cancels stale blur dismissals when a tray click races a focus-loss event.
 /// A new token invalidates every pending dismissal captured before it.
@@ -50,19 +39,11 @@ pub fn window<'a>(app: &'a AppHandle) -> Option<WebviewWindow> {
     app.get_webview_window(WINDOW)
 }
 
-pub fn current_mode(app: &AppHandle) -> Mode {
-    app.state::<Mutex<Mode>>()
-        .lock()
-        .map(|mode| *mode)
-        .unwrap_or(Mode::Panel)
-}
-
 /// Opens the status/settings panel anchored under the tray icon.
 pub fn show_panel(app: &AppHandle) {
     let Some(w) = window(app) else { return };
     app.state::<DismissGuard>().cancel_pending();
     webview_memory::set_inactive(&w, false);
-    set_mode(app, Mode::Panel);
     let _ = w.set_size(LogicalSize::new(PANEL_WIDTH, PANEL_HEIGHT));
     if let Err(e) = w.as_ref().window().move_window_constrained(Position::TrayCenter) {
         log::warn!("tray positioning failed: {e}; anchoring to bottom-right");
@@ -70,18 +51,8 @@ pub fn show_panel(app: &AppHandle) {
     }
     let _ = w.show();
     let _ = w.set_focus();
-}
-
-/// Opens the snooze toast above the bottom-right corner of the primary monitor.
-pub fn show_toast(app: &AppHandle) {
-    let Some(w) = window(app) else { return };
-    app.state::<DismissGuard>().cancel_pending();
-    webview_memory::set_inactive(&w, false);
-    set_mode(app, Mode::Toast);
-    let _ = w.set_size(LogicalSize::new(TOAST_WIDTH, TOAST_HEIGHT));
-    anchor_bottom_right(&w, TOAST_WIDTH, TOAST_HEIGHT);
-    let _ = w.show();
-    let _ = w.set_focus();
+    // Push fresh state so the panel never shows content from before it hid.
+    crate::commands::emit_state(app);
 }
 
 pub fn hide(app: &AppHandle) {
@@ -94,7 +65,7 @@ pub fn hide(app: &AppHandle) {
 
 /// Positions a window above the bottom-right corner of the primary monitor,
 /// clearing the taskbar. Fallback when the tray anchor is unavailable.
-fn anchor_bottom_right(window: &WebviewWindow, width: f64, height: f64) {
+pub fn anchor_bottom_right(window: &WebviewWindow, width: f64, height: f64) {
     let Some(monitor) = window
         .current_monitor()
         .ok()
@@ -119,12 +90,6 @@ pub fn toggle(app: &AppHandle) {
         hide(app);
     } else {
         show_panel(app);
-    }
-}
-
-fn set_mode(app: &AppHandle, mode: Mode) {
-    if let Ok(mut current) = app.state::<Mutex<Mode>>().lock() {
-        *current = mode;
     }
 }
 

@@ -22,6 +22,9 @@
   const remaining = $derived(shutdownAt ? shutdownAt.getTime() - now : 0);
   const toast = $derived(state?.toast ?? null);
   const toastLeft = $derived(toast ? new Date(toast.dismissAt).getTime() - now : 0);
+  // The toast window loads the same bundle with ?view=toast; the panel is
+  // everything else.
+  const isToast = new URLSearchParams(window.location.search).get('view') === 'toast';
 
   onMount(() => {
     let unlisten: (() => void) | undefined;
@@ -89,29 +92,31 @@
   });
 </script>
 
-{#if toast && shutdownAt && state}
-  <main class="toast">
-    <div class="toast-top">
-      <span class="glyph"><PowerIcon /></span>
-      <div>
-        <div class="toast-title">Shutdown at {formatClock(shutdownAt)}</div>
-        <div class="toast-sub">in {humanRemaining(remaining)} &middot; snooze for {state.settings.snoozeInterval} min?</div>
+{#if isToast}
+  {#if toast && shutdownAt && state}
+    <main class="toast">
+      <div class="toast-top">
+        <span class="glyph"><PowerIcon /></span>
+        <div>
+          <div class="toast-title">Shutdown at {formatClock(shutdownAt)}</div>
+          <div class="toast-sub">in {humanRemaining(remaining)} &middot; snooze for {state.settings.snoozeInterval} min?</div>
+        </div>
       </div>
-    </div>
-    <div class="meter">
-      <i
-        class:critical={toastLeft < 60_000}
-        style={`width:${Math.min(100, (toastLeft / (state.settings.duration * 60_000)) * 100)}%`}
-      ></i>
-    </div>
-    <div class="btn-row">
-      <button class="btn ghost" onclick={onDismiss}>Dismiss</button>
-      <button class="btn primary" onclick={onSnooze}>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v7" /><path d="M6.3 7.3a7 7 0 1 0 11.4 0" /></svg>
-        Snooze +{state.settings.snoozeInterval} min
-      </button>
-    </div>
-  </main>
+      <div class="meter">
+        <i
+          class:critical={toastLeft < 60_000}
+          style={`width:${Math.min(100, (toastLeft / (state.settings.duration * 60_000)) * 100)}%`}
+        ></i>
+      </div>
+      <div class="btn-row">
+        <button class="btn ghost" onclick={onDismiss}>Dismiss</button>
+        <button class="btn primary" onclick={onSnooze}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v7" /><path d="M6.3 7.3a7 7 0 1 0 11.4 0" /></svg>
+          Snooze +{state.settings.snoozeInterval} min
+        </button>
+      </div>
+    </main>
+  {/if}
 {:else if screen === 'settings' && form}
   <main class="panel">
     <header>

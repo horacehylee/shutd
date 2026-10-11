@@ -4,7 +4,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_autostart::ManagerExt as AutostartExt;
 
 use crate::config::Config;
-use crate::{config, panel, scheduler, AppState};
+use crate::{config, scheduler, toast, AppState};
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -74,9 +74,7 @@ pub fn snooze(app: AppHandle) -> StatePayload {
         schedule.snooze(&config);
     }
     log::info!("snoozed, shutdown at {}", build_payload(&app).shutdown_at.format("%H:%M"));
-    if panel::current_mode(&app) == panel::Mode::Toast {
-        panel::hide(&app);
-    }
+    toast::hide(&app);
     emit_state(&app)
 }
 
@@ -84,11 +82,13 @@ pub fn snooze(app: AppHandle) -> StatePayload {
 pub fn dismiss_toast(app: AppHandle) -> StatePayload {
     {
         let state = app.state::<AppState>();
-        state.schedule.lock().expect("schedule lock").toast = None;
+        let mut schedule = state.schedule.lock().expect("schedule lock");
+        // Dismissal is sticky: the scheduler must not re-arm this toast for
+        // the same shutdown time.
+        schedule.dismissed_for = Some(schedule.shutdown_at);
+        schedule.toast = None;
     }
-    if panel::current_mode(&app) == panel::Mode::Toast {
-        panel::hide(&app);
-    }
+    toast::hide(&app);
     emit_state(&app)
 }
 

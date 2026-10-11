@@ -4,6 +4,7 @@ mod logging;
 mod panel;
 mod scheduler;
 mod shutdown;
+mod toast;
 mod tray;
 mod webview_memory;
 
@@ -68,7 +69,6 @@ pub fn run() {
             schedule: Mutex::new(schedule),
         })
         .manage(DismissGuard::default())
-        .manage(Mutex::new(panel::Mode::Panel))
         .invoke_handler(tauri::generate_handler![
             commands::get_state,
             commands::snooze,
@@ -78,6 +78,13 @@ pub fn run() {
         ])
         .setup(|app| {
             install_tray(app.handle())?;
+            // Both windows start hidden; drop their renderers to low memory
+            // until first use.
+            for label in [panel::WINDOW, toast::WINDOW] {
+                if let Some(w) = app.get_webview_window(label) {
+                    webview_memory::set_inactive(&w, true);
+                }
+            }
             let handle = app.handle().clone();
             thread::spawn(move || scheduler_loop(handle));
             let handle = app.handle().clone();
@@ -159,12 +166,11 @@ fn scheduler_loop(app: AppHandle) {
                 return;
             }
             Some("toast") => {
-                panel::show_toast(&app);
-                commands::emit_state(&app);
+                toast::show(&app);
             }
             Some("toast-expired") => {
                 log::info!("toast expired without snooze");
-                panel::hide(&app);
+                toast::hide(&app);
                 commands::emit_state(&app);
             }
             _ => {}
