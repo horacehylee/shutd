@@ -1,8 +1,7 @@
-// Builds the portable Windows exe and publishes it as a timestamped GitHub
-// release. Tag convention: portable-<version>-<yyyyMMddHHmm> in the local
-// clock (HKT for this machine), so repeated builds of the same upstream
-// version stay distinguishable. The uploaded asset keeps the plain
-// `shutd.exe` name.
+// Builds the portable Windows exe and publishes it as a GitHub release.
+// Tag convention: v<version>. Bump the version in package.json,
+// src-tauri/tauri.conf.json, and src-tauri/Cargo.toml before releasing so
+// the tag is unique. The uploaded asset keeps the plain `shutd.exe` name.
 
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
@@ -41,6 +40,23 @@ function latestTag() {
   return result.status === 0 ? result.stdout.trim() : null;
 }
 
+// All three version locations must match before a release; a partial bump
+// would otherwise tag one version while shipping another.
+function assertVersionsMatch() {
+  const packageVersion = JSON.parse(readFileSync('package.json', 'utf8')).version;
+  const tauriVersion = JSON.parse(readFileSync('src-tauri/tauri.conf.json', 'utf8')).version;
+  const cargoVersion = readFileSync('src-tauri/Cargo.toml', 'utf8').match(
+    /^version = "(.+)"$/m,
+  )?.[1];
+  if (packageVersion !== tauriVersion || packageVersion !== cargoVersion) {
+    console.error(
+      `Version mismatch: package.json=${packageVersion} tauri.conf.json=${tauriVersion} Cargo.toml=${cargoVersion}. Bump all three.`,
+    );
+    process.exit(1);
+  }
+  return packageVersion;
+}
+
 function showChangeSummary(previousTag) {
   if (!previousTag) {
     console.log('No previous tag found; skipping the change summary.');
@@ -52,14 +68,11 @@ function showChangeSummary(previousTag) {
   run('git', ['diff', '--stat', `${previousTag}..HEAD`]);
 }
 
-function releaseNotes(changes, stamp) {
+function releaseNotes(changes) {
   return [
     "## What's Changed",
     '',
     ...changes.map((change) => `- ${change}`),
-    '',
-    `Standalone Windows build, built ${stamp} HKT. Requires WebView2 (preinstalled on ` +
-      'Windows 10/11). Settings stay in ~/.config/shutd/config.yaml.',
   ].join('\n');
 }
 
@@ -70,22 +83,6 @@ function run(command, args, useShell = false) {
   if (result.status !== 0) {
     process.exit(result.status ?? 1);
   }
-}
-
-function pad(value) {
-  return String(value).padStart(2, '0');
-}
-
-// The local machine runs in HKT, so local time is the release stamp.
-function hktStamp() {
-  const now = new Date();
-  return (
-    `${now.getFullYear()}` +
-    `${pad(now.getMonth() + 1)}` +
-    `${pad(now.getDate())}` +
-    `${pad(now.getHours())}` +
-    `${pad(now.getMinutes())}`
-  );
 }
 
 function findGh() {
@@ -119,11 +116,10 @@ function githubRepository() {
   return `${match[1]}/${match[2]}`;
 }
 
-const version = JSON.parse(readFileSync('package.json', 'utf8')).version;
-const stamp = hktStamp();
-const tag = `portable-${version}-${stamp}`;
+const version = assertVersionsMatch();
+const tag = `v${version}`;
 const exePath = 'src-tauri/target/release/shutd.exe';
-const notes = releaseNotes(changes, stamp);
+const notes = releaseNotes(changes);
 
 showChangeSummary(latestTag());
 
@@ -162,7 +158,7 @@ run(gh, [
   '--repo',
   repository,
   '--title',
-  `Shutd ${version} portable (${stamp} HKT)`,
+  tag,
   '--notes',
   notes,
 ]);

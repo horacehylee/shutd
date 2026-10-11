@@ -22,6 +22,15 @@ app; the Go code is gone.
   location and confirm Panel > Settings > Launch at startup. A repo build
   alone leaves the startup binary stale.
 
+## Release
+
+- Bump the version in `package.json`, `src-tauri/tauri.conf.json`, and
+  `src-tauri/Cargo.toml` before releasing (keep all three identical); the
+  release script fails on a mismatch or an existing `v<version>` tag.
+- Run `corepack pnpm release --changes "..."` (repeat `--changes` for each
+  release-note bullet). It builds the portable exe, tags `v<version>`, and
+  publishes the GitHub release.
+
 ## Tests
 
 - Rust: `cargo test --manifest-path src-tauri/Cargo.toml`
