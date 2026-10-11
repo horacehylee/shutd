@@ -1,74 +1,56 @@
-# 🛑 Shutd
+# Shutd
 
-> Auto shutdown utility tool for Windows with popup and snooze features
+Auto shutdown utility for Windows: tray panel, snooze toast, dark mode.
+Rust + Tauri 2 + Svelte 5.
 
-![Screenshot](./screenshot.png)
+## Build
 
-## 🔨 Build
-
-`-ldflags -H=windowsgui` compile flags is to avoid opening a console at application startup
-
-```
-go install -ldflags -H=windowsgui ./cmd/shutd
+```sh
+corepack pnpm install
+corepack pnpm tauri build -- --no-bundle
 ```
 
-## 🛠 Usage
+Binary: `src-tauri/target/release/shutd.exe` (about 9 MB, WebView2 is a system
+component).
 
-If wanted to run it sliently (i.e. without any console popup) at start up, you may do the following
+For development: `corepack pnpm tauri dev`.
 
-(Not sure why simply running `shutd.exe` in Startup with `-ldflags -H=windowsgui` could not trigger the shutdown properly)
+## Use
 
-1. Create a `shutd.vbs` at any folder
-```
-Set WshShell = CreateObject("WScript.Shell") 
-gopath = WshShell.ExpandEnvironmentStrings("%GOPATH%")
-WshShell.Run chr(34) & gopath & "\bin\shutd.exe" & Chr(34), 0
-Set WshShell = Nothing
-```
+1. Run `shutd.exe`. A power glyph appears in the tray.
+2. Left click the tray icon to open the panel: next shutdown time, Snooze
+   button, Settings. Settings edits save and hot-reload the scheduler.
+3. A toast slides up above the taskbar 10 minutes (configurable) before
+   shutdown. Snooze pushes it back, Dismiss closes the toast, timeout lets the
+   shutdown proceed.
+4. Click anywhere outside the panel to dismiss it.
 
-2. Create a shortcut and choose `shutd.vbs` that you created as target
+## Config
 
-3. Move the shortcut to start up folder, simply search `Startup` from Windows explorer
-
-4. You should be able to see `shutd.exe` running in task manager next time when it starts up
-
-## ⚙ Configuration
-
-Following set of default configurations will be generated under home directory `%USERPROFILE%/.shutd.yaml`
-
-Feel free to tweak it for your liking
-
-After updated the configuration, `shutd` will automatically pick up the latest config, no need to restart it manually
+`~/.config/shutd/config.yaml` — editable in the panel or by hand, hot-reloaded
+either way. A legacy `~/.shutd.yaml` migrates on first run.
 
 ```yaml
-startTime: "01:00"
-snoozeInterval: 15
+startTime: "01:00"       # daily shutdown time (HH:MM)
+snoozeInterval: 15       # minutes a snooze delays shutdown
 notification:
-  before: 10
-  duration: 10
+  before: 10             # minutes before shutdown to show the toast
+  duration: 10           # minutes before the toast auto-dismisses
 ```
 
-| Property                | Default Value | Remarks                                                             |
-| ----------------------- | ------------- | ------------------------------------------------------------------- |
-| `startTime`             | "01:00"       | Time for auto shutdown                                         |
-| `snoozeInterval`        | 15            | Minutes that will snooze for shutdown                      |
-| `notification.before`   | 10            | Minutes before shutdown for snooze popup notification     |
-| `notification.duration` | 10            | Minutes for snnoze popup notification to default to not snooze |
+Logs: `~/.config/shutd/shutd.log`.
 
-## 📃 Logging
+## Autostart
 
-Log file will be generated under you home directory `%USERPROFILE%/.shutd.log`
+Panel > Settings > Launch at startup. Replaces the old `shutd.vbs` workaround.
 
-Troubleshoot error there if wanted
+## Tests
 
-## 🚢 Release
-
-```
-go install github.com/mitchellh/gox@latest
-
-gox -os=windows -ldflags -H=windowsgui -output ./build/{{.Dir}}_{{.OS}}_{{.Arch}} ./cmd/shutd
+```sh
+cargo test --manifest-path src-tauri/Cargo.toml
+corepack pnpm test
 ```
 
-## 📜 License
+## License
 
-Distributed under the MIT License. See [LICENSE](./LICENSE) for more information.
+MIT. See [LICENSE](./LICENSE).

@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Shutd popup mockups</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #171719;
+      --muted: #727278;
+      --tertiary: #a5a5aa;
+      --tray: #ffffff;
+      --card: color-mix(in srgb, var(--ink) 5%, var(--tray));
+      --page: #f6f6f7;
+      --line: rgba(0, 0, 0, 0.09);
+      --accent: #1689ef;
+      --warning: #e5a400;
+      --critical: #e3483f;
+      --taskbar: #f3f3f3;
+      --desktop: linear-gradient(160deg, #e8ecf2, #d8dde6);
+      --shadow: 0 12px 36px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.10);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme]) {
+        color-scheme: dark;
+        --ink: #f4f4f5;
+        --muted: #a7a7ad;
+        --tertiary: #707077;
+        --tray: #1d1d1f;
+        --page: #101012;
+        --line: rgba(255, 255, 255, 0.09);
+        --accent: #2997ff;
+        --warning: #ffd54a;
+        --critical: #ff6961;
+        --taskbar: #202020;
+        --desktop: linear-gradient(160deg, #17202b, #0d1218);
+        --shadow: 0 12px 36px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.4);
+      }
+    }
+
+    :root[data-theme='light'] {
+      color-scheme: light;
+      --ink: #171719;
+      --muted: #727278;
+      --tertiary: #a5a5aa;
+      --tray: #ffffff;
+      --page: #f6f6f7;
+      --line: rgba(0, 0, 0, 0.09);
+      --accent: #1689ef;
+      --warning: #e5a400;
+      --critical: #e3483f;
+      --taskbar: #f3f3f3;
+      --desktop: linear-gradient(160deg, #e8ecf2, #d8dde6);
+      --shadow: 0 12px 36px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.10);
+    }
+
+    :root[data-theme='dark'] {
+      color-scheme: dark;
+      --ink: #f4f4f5;
+      --muted: #a7a7ad;
+      --tertiary: #707077;
+      --tray: #1d1d1f;
+      --page: #101012;
+      --line: rgba(255, 255, 255, 0.09);
+      --accent: #2997ff;
+      --warning: #ffd54a;
+      --critical: #ff6961;
+      --taskbar: #202020;
+      --desktop: linear-gradient(160deg, #17202b, #0d1218);
+      --shadow: 0 12px 36px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 48px;
+      background: var(--page);
+      color: var(--ink);
+      font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px;
+    }
+
+    main { width: min(1020px, 100%); margin: 0 auto; }
+
+    h1 { margin: 0 0 8px; font-size: 24px; font-weight: 600; letter-spacing: -0.02em; }
+    .lede { width: 74ch; max-width: 100%; margin: 0 0 28px; color: var(--muted); line-height: 1.55; }
+
+    .theme-toggle { display: inline-flex; margin-bottom: 28px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+    .theme-toggle button {
+      padding: 7px 16px;
+      border: 0;
+      background: var(--tray);
+      color: var(--muted);
+      font: inherit;
+      cursor: pointer;
+    }
+    .theme-toggle button + button { border-left: 1px solid var(--line); }
+    .theme-toggle button[aria-pressed='true'] { background: var(--accent); color: #fff; }
+
+    section {
+      background: var(--tray);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    h2 { margin: 0 0 4px; font-size: 15px; font-weight: 600; }
+    .note { margin: 0 0 20px; color: var(--muted); line-height: 1.5; }
+
+    .pair { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
+
+    /* Fake desktop stage */
+    .stage {
+      position: relative;
+      height: 380px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--desktop);
+      overflow: hidden;
+    }
+    .stage-taskbar {
+      position: absolute;
+      inset: auto 0 0 0;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 16px;
+      padding: 0 14px;
+      background: var(--taskbar);
+      color: var(--ink);
+    }
+    .stage-tray {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      opacity: 0.85;
+    }
+    .stage-tray .anchor { outline: 1px dashed var(--tertiary); outline-offset: 4px; border-radius: 4px; }
+
+    /* The actual popup window, frameless, 320 px */
+    .panel {
+      width: 320px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: var(--tray);
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+    .panel--floating { position: absolute; right: 24px; bottom: 64px; }
+
+    .panel-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .panel-header h3 { margin: 0; font-size: 14px; font-weight: 600; }
+    .panel-header .spacer { flex: 1; }
+    .icon-btn {
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border: 0;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .icon-btn:hover { background: var(--card); color: var(--ink); }
+    .back-btn { margin-right: 2px; }
+
+    .next-label { font-size: 12px; color: var(--muted); }
+    .next-time { font-size: 36px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; }
+    .next-sub { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 10px 14px;
+      margin-bottom: 8px;
+    }
+    .card-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+    .card-row + .card-row { margin-top: 10px; }
+    .card-row .label { font-size: 13px; font-weight: 600; }
+    .card-row .value { font-size: 12px; color: var(--muted); }
+    .meter { height: 5px; border-radius: 3px; background: color-mix(in srgb, var(--ink) 14%, var(--tray)); margin-top: 6px; overflow: hidden; }
+    .meter i { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
+    .meter--warning i { background: var(--warning); }
+    .meter--critical i { background: var(--critical); }
+
+    .btn {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 14px;
+      border: 0;
+      border-radius: 8px;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn--primary { width: 100%; background: var(--accent); color: #fff; }
+    .btn--primary:hover { filter: brightness(1.08); }
+    .btn--ghost { background: var(--card); color: var(--ink); font-weight: 400; }
+    .btn--ghost:hover { background: color-mix(in srgb, var(--ink) 8%, var(--tray)); }
+    .btn-row { display: flex; gap: 8px; }
+    .btn-row .btn--primary { flex: 1; }
+
+    /* Settings screen */
+    .setting-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .setting-row + .setting-row { margin-top: 10px; }
+    .setting-row label { font-size: 13px; }
+    .setting-row select,
+    .setting-row input {
+      font: inherit;
+      color: var(--ink);
+      background: var(--tray);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 5px 8px;
+    }
+    .saved-flag { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
+    .saved-flag svg { color: var(--accent); }
+    .settings-note { font-size: 12px; color: var(--tertiary); margin: 10px 2px 0; }
+
+    /* Snooze toast */
+    .toast {
+      width: 340px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: var(--tray);
+      box-shadow: var(--shadow);
+      padding: 14px 16px;
+    }
+    .toast-top { display: flex; gap: 10px; margin-bottom: 10px; }
+    .toast-glyph {
+      display: grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      background: var(--card);
+      color: var(--ink);
+      flex: none;
+    }
+    .toast-title { font-size: 13px; font-weight: 600; }
+    .toast-sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
+    .toast-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+    .toast-countdown { font-size: 11px; color: var(--tertiary); }
+
+    .caption { margin: 10px 2px 0; font-size: 12px; color: var(--tertiary); }
+
+    ul.decisions { margin: 0; padding-left: 20px; color: var(--muted); line-height: 1.7; }
+    ul.decisions b { color: var(--ink); font-weight: 600; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Shutd popup mockups</h1>
+  <p class="lede">
+    The tray icon opens a single frameless 320 px panel anchored under the tray (the positioner's tray
+    center). The panel has two screens: a status screen and an inline settings screen, so the config file
+    never needs manual editing. A separate snooze toast slides up above the taskbar corner when the
+    notification window starts. Toggle the theme to check both modes; the real window keeps this exact
+    palette in light and dark with no white flash, because the native background color is set per theme
+    the same way OpenQuota does it.
+  </p>
+
+  <div class="theme-toggle" role="group" aria-label="Preview theme">
+    <button type="button" data-set-theme="light" aria-pressed="false">Light</button>
+    <button type="button" data-set-theme="dark" aria-pressed="false">Dark</button>
+    <button type="button" data-set-theme="" aria-pressed="true">System</button>
+  </div>
+
+  <section>
+    <h2>Panel in context, status screen</h2>
+    <p class="note">
+      Left click on the tray icon toggles the panel; clicking anywhere else dismisses it. The dashed box in
+      the taskbar is the tray anchor point. The meter shows the fraction of the day elapsed toward the
+      shutdown time, matching the tray icon ring.
+    </p>
+    <div class="stage">
+      <div class="panel panel--floating">
+        <div class="panel-header">
+          <h3>Shutd</h3>
+          <span class="spacer"></span>
+          <button class="icon-btn" title="Settings" aria-label="Settings">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
+        </div>
+        <div class="next-label">Next shutdown</div>
+        <div class="next-time">01:00</div>
+        <div class="next-sub">today &middot; in 2 h 47 m</div>
+        <div class="card">
+          <div class="card-row">
+            <span class="label">Day progress</span>
+            <span class="value">88%</span>
+          </div>
+          <div class="meter"><i style="width: 88%"></i></div>
+        </div>
+        <div class="card">
+          <div class="card-row">
+            <span class="label">Snooze interval</span>
+            <span class="value">15 min</span>
+          </div>
+          <div class="card-row">
+            <span class="label">Notification</span>
+            <span class="value">00:50 &middot; 10 min before</span>
+          </div>
+        </div>
+        <button class="btn btn--primary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v7"/><path d="M6.3 7.3a7 7 0 1 0 11.4 0"/></svg>
+          Snooze +15 min
+        </button>
+      </div>
+      <div class="stage-taskbar">
+        <span style="font-size: 12px; opacity: 0.6">22:13 &nbsp; 10/11/2026</span>
+        <div class="stage-tray">
+          <svg width="16" height="16" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" opacity="0.7"><path d="M25 21H7v-9h18z"/><path d="M14 25h4"/></svg>
+          <svg width="16" height="16" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" opacity="0.7"><path d="M6 20a14 14 0 0 1 20 0"/><path d="M10.5 24.5a8 8 0 0 1 11 0"/><circle cx="16" cy="28" r="1.4" fill="currentColor"/></svg>
+          <span class="anchor">
+            <svg width="16" height="16" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16 8.6v7"/><path d="M21.6 10.8a7 7 0 1 1-11.2 0"/></svg>
+          </span>
+          <span style="font-size: 12px; opacity: 0.7">ENG</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Panel screens at full size</h2>
+    <p class="note">
+      The status panel on the left, the settings screen on the right. Settings edits write straight to the
+      config and hot-reload the scheduler, the same behavior the file watcher provides today.
+    </p>
+    <div class="pair">
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Shutd</h3>
+          <span class="spacer"></span>
+          <button class="icon-btn" title="Settings" aria-label="Settings">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
+        </div>
+        <div class="next-label">Next shutdown</div>
+        <div class="next-time">01:15</div>
+        <div class="next-sub">today &middot; snoozed +15 min</div>
+        <div class="card">
+          <div class="card-row">
+            <span class="label">Day progress</span>
+            <span class="value">90%</span>
+          </div>
+          <div class="meter"><i style="width: 90%"></i></div>
+        </div>
+        <div class="card">
+          <div class="card-row">
+            <span class="label">Snoozed once</span>
+            <span class="value">+15 min at 00:52</span>
+          </div>
+        </div>
+        <button class="btn btn--primary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v7"/><path d="M6.3 7.3a7 7 0 1 0 11.4 0"/></svg>
+          Snooze +15 min
+        </button>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <button class="icon-btn back-btn" title="Back" aria-label="Back">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <h3>Settings</h3>
+          <span class="spacer"></span>
+          <span class="saved-flag">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            Saved
+          </span>
+        </div>
+        <div class="card">
+          <div class="setting-row">
+            <label for="s-time">Shutdown time</label>
+            <input id="s-time" type="time" value="01:00" />
+          </div>
+        </div>
+        <div class="card">
+          <div class="setting-row">
+            <label for="s-snooze">Snooze interval</label>
+            <select id="s-snooze">
+              <option>5 min</option>
+              <option>10 min</option>
+              <option selected>15 min</option>
+              <option>30 min</option>
+              <option>60 min</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <label for="s-before">Notify before shutdown</label>
+            <select id="s-before">
+              <option>5 min</option>
+              <option selected>10 min</option>
+              <option>15 min</option>
+              <option>30 min</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <label for="s-duration">Toast auto-dismiss</label>
+            <select id="s-duration">
+              <option>5 min</option>
+              <option selected>10 min</option>
+              <option>15 min</option>
+              <option>Until dismissed</option>
+            </select>
+          </div>
+        </div>
+        <p class="settings-note">Changes apply immediately and hot-reload the scheduler.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Snooze toast</h2>
+    <p class="note">
+      Fires the configured number of minutes before shutdown, bottom-right above the taskbar, always on
+      top. Snoozing reschedules the shutdown and the toast closes; dismissing closes it and lets the
+      shutdown happen. The countdown bar turns amber inside the notification window and red inside the
+      final minute. If the countdown expires with no interaction, the toast closes and the shutdown runs,
+      matching today's timeout behavior.
+    </p>
+    <div class="pair">
+      <div class="stage" style="height: 300px">
+        <div class="toast" style="position: absolute; right: 24px; bottom: 64px">
+          <div class="toast-top">
+            <span class="toast-glyph">
+              <svg width="16" height="16" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M16 8.6v7"/><path d="M21.6 10.8a7 7 0 1 1-11.2 0"/></svg>
+            </span>
+            <div>
+              <div class="toast-title">Shutdown at 01:00</div>
+              <div class="toast-sub">in 9 min 32 s &middot; snooze for 15 min?</div>
+            </div>
+          </div>
+          <div class="meter meter--warning"><i style="width: 72%"></i></div>
+          <div class="btn-row" style="margin-top: 12px">
+            <button class="btn btn--ghost">Dismiss</button>
+            <button class="btn btn--primary">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v7"/><path d="M6.3 7.3a7 7 0 1 0 11.4 0"/></svg>
+              Snooze +15 min
+            </button>
+          </div>
+          <div class="toast-foot">
+            <span class="toast-countdown">Auto-dismiss in 8:12</span>
+          </div>
+        </div>
+        <div class="stage-taskbar">
+          <span style="font-size: 12px; opacity: 0.6">22:13 &nbsp; 10/11/2026</span>
+        </div>
+      </div>
+
+      <div class="toast">
+        <div class="toast-top">
+          <span class="toast-glyph">
+            <svg width="16" height="16" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M16 8.6v7"/><path d="M21.6 10.8a7 7 0 1 1-11.2 0"/></svg>
+          </span>
+          <div>
+            <div class="toast-title">Shutdown at 01:00</div>
+            <div class="toast-sub">in 42 s &middot; snooze for 15 min?</div>
+          </div>
+        </div>
+        <div class="meter meter--critical"><i style="width: 7%"></i></div>
+        <div class="btn-row" style="margin-top: 12px">
+          <button class="btn btn--ghost">Dismiss</button>
+          <button class="btn btn--primary">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v7"/><path d="M6.3 7.3a7 7 0 1 0 11.4 0"/></svg>
+            Snooze +15 min
+          </button>
+        </div>
+      </div>
+    </div>
+    <p class="caption">Left: toast in the desktop context. Right: critical bar inside the final minute.</p>
+  </section>
+
+  <section>
+    <h2>Decisions captured in these mockups</h2>
+    <ul class="decisions">
+      <li><b>Tray icon.</b> Runtime-rendered by tiny-skia; Option B, the bare power glyph at 2.0 stroke, chosen from <code>tray-icon-concept.html</code>.</li>
+      <li><b>Settings in the panel.</b> Shutdown time, snooze interval, notify-before, and toast duration are editable inline and save straight to the config; the YAML file becomes an implementation detail.</li>
+      <li><b>Config and log location.</b> Both move to <code>~/.config/shutd</code> (<code>config.yaml</code>, <code>shutd.log</code>), replacing today's dotfiles in the home root. The migration can import an existing <code>~/.shutd.yaml</code> on first run.</li>
+      <li><b>Idle memory.</b> When the panel or toast hides, the webview is suspended the way OpenQuota's <code>webview_memory</code> module does, so the app idles close to scheduler-only cost.</li>
+    </ul>
+  </section>
+</main>
+
+<script>
+  document.querySelectorAll('[data-set-theme]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const theme = button.dataset.setTheme;
+      if (theme) document.documentElement.dataset.theme = theme;
+      else delete document.documentElement.dataset.theme;
+      document.querySelectorAll('[data-set-theme]').forEach((b) => {
+        b.setAttribute('aria-pressed', String(b === button));
+      });
+    });
+  });
+</script>
+</body>
+</html>
