@@ -1,0 +1,30 @@
+:root {
+  font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  color-scheme: light;
+  color: #171719;
+  --ink: #171719;
+  --muted: #727278;
+  --tertiary: #a5a5aa;
+  --tray: #ffffff;
+  --card: color-mix(in srgb, var(--ink) 5%, var(--tray));
+  --line: rgba(0, 0, 0, 0.09);
+  --accent: #1689ef;
+  --warning: #e5a400;
+  --critical: #e3483f;
+  --button-hover: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    color: #f4f4f5;
+    --ink: #f4f4f5;
+    --muted: #a7a7ad;
+    --tertiary: #707077;
+    --tray: #1d1d1f;
+    --line: rgba(255, 255, 255, 0.09);
+    --accent: #2997ff;
+    --warning: #ffd54a;
+    --critical: #ff6961;
+  }
+}

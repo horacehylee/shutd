@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Shutd tray icon concept</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #171719;
+      --muted: #727278;
+      --card: #ffffff;
+      --page: #f6f6f7;
+      --line: rgba(0, 0, 0, 0.09);
+      --accent: #1689ef;
+      --taskbar-light: #f3f3f3;
+      --taskbar-dark: #202020;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme]) {
+        color-scheme: dark;
+        --ink: #f4f4f5;
+        --muted: #a7a7ad;
+        --card: #1d1d1f;
+        --page: #101012;
+        --line: rgba(255, 255, 255, 0.09);
+        --accent: #2997ff;
+      }
+    }
+
+    :root[data-theme='light'] {
+      color-scheme: light;
+      --ink: #171719;
+      --muted: #727278;
+      --card: #ffffff;
+      --page: #f6f6f7;
+      --line: rgba(0, 0, 0, 0.09);
+      --accent: #1689ef;
+    }
+
+    :root[data-theme='dark'] {
+      color-scheme: dark;
+      --ink: #f4f4f5;
+      --muted: #a7a7ad;
+      --card: #1d1d1f;
+      --page: #101012;
+      --line: rgba(255, 255, 255, 0.09);
+      --accent: #2997ff;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 48px;
+      background: var(--page);
+      color: var(--ink);
+      font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px;
+    }
+
+    main { width: min(960px, 100%); margin: 0 auto; }
+
+    h1 { margin: 0 0 8px; font-size: 24px; font-weight: 600; letter-spacing: -0.02em; }
+
+    .lede { width: 72ch; max-width: 100%; margin: 0 0 28px; color: var(--muted); line-height: 1.55; }
+
+    .theme-toggle { display: inline-flex; margin-bottom: 28px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+    .theme-toggle button {
+      padding: 7px 16px;
+      border: 0;
+      background: var(--card);
+      color: var(--muted);
+      font: inherit;
+      cursor: pointer;
+    }
+    .theme-toggle button + button { border-left: 1px solid var(--line); }
+    .theme-toggle button[aria-pressed='true'] { background: var(--accent); color: #fff; }
+
+    section {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    h2 { margin: 0 0 4px; font-size: 15px; font-weight: 600; }
+    .note { margin: 0 0 20px; color: var(--muted); line-height: 1.5; }
+
+    .row { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .state { display: grid; justify-items: center; gap: 10px; min-width: 84px; }
+    .state svg { display: block; }
+    .state-label { color: var(--muted); font-size: 12px; white-space: nowrap; }
+
+    .taskbar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 14px;
+      height: 52px;
+      border-radius: 8px;
+      padding: 0 16px;
+    }
+    .taskbar.light { background: var(--taskbar-light); color: #1a1a1a; box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.08); }
+    .taskbar.dark { background: var(--taskbar-dark); color: #ffffff; box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.08); }
+    .taskbar .state { min-width: 0; }
+    .taskbar .state-label { display: none; }
+
+    code { font-family: Consolas, monospace; font-size: 12px; background: var(--page); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Shutd tray icon concept</h1>
+  <p class="lede">
+    All variants are monochrome and rendered at runtime by <code>tiny-skia</code> onto a 32&times;32 RGBA
+    buffer, one glyph color picked from the <code>SystemUsesLightTheme</code> registry value: near-black
+    on a light taskbar, white on a dark taskbar. The SVGs below approximate exactly what the rasterizer
+    draws: stroked circles and arc segments only, so every variant is a handful of path strokes in Rust.
+    States differ by geometry, never by color, because the Windows 11 tray is monochrome by convention.
+  </p>
+
+  <div class="theme-toggle" role="group" aria-label="Preview theme">
+    <button type="button" data-set-theme="light" aria-pressed="false">Light</button>
+    <button type="button" data-set-theme="dark" aria-pressed="false">Dark</button>
+    <button type="button" data-set-theme="" aria-pressed="true">System</button>
+  </div>
+
+  <section>
+    <h2>Option A &mdash; Power glyph, depleting outer ring</h2>
+    <p class="note">
+      The ring is the fraction of the day left until the next shutdown, so it drains from full at midnight
+      to empty at the shutdown time. Inside the notification window the glyph stays the same; the panel and
+      toast carry the urgency. The ring gives the tray a live signal without extra color, matching the
+      OpenQuota gauge pattern.
+    </p>
+    <div class="row">
+      <div class="state">
+        <svg width="64" height="64" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round">
+          <circle cx="16" cy="16" r="13.4" opacity="0.28" />
+          <path d="M16 9.4v6.2" stroke-width="3" />
+          <path d="M21 11.2a6.2 6.2 0 1 1-10 0" stroke-width="3" />
+        </svg>
+        <span class="state-label">32 px detail</span>
+      </div>
+      <div class="state">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round">
+          <circle cx="16" cy="16" r="13.4" opacity="0.28" />
+          <path d="M16 9.4v6.2" stroke-width="3" />
+          <path d="M21 11.2a6.2 6.2 0 1 1-10 0" stroke-width="3" />
+        </svg>
+        <span class="state-label">Ring 100%</span>
+      </div>
+      <div class="state">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-linecap="round">
+          <circle cx="16" cy="16" r="13.4" opacity="0.28" />
+          <path d="M16 2.6 A 13.4 13.4 0 1 1 3.26 20.14" stroke-width="2.6" />
+          <path d="M16 9.4v6.2" stroke-width="3" />
+          <path d="M21 11.2a6.2 6.2 0 1 1-10 0" stroke-width="3" />
+        </svg>
+        <span class="state-label">Ring ~70%</span>
+      </div>
+      <div class="state">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-linecap="round">
+          <circle cx="16" cy="16" r="13.4" opacity="0.28" />
+          <path d="M16 2.6 A 13.4 13.4 0 0 1 29.4 16" stroke-width="2.6" />
+          <path d="M16 9.4v6.2" stroke-width="3" />
+          <path d="M21 11.2a6.2 6.2 0 1 1-10 0" stroke-width="3" />
+        </svg>
+        <span class="state-label">Ring ~25%</span>
+      </div>
+      <div class="taskbar light">
+        <div class="state"><svg width="16" height="16" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="16" cy="16" r="13.4" opacity="0.28" stroke-width="2.6"/><path d="M16 9.4v6.2" stroke-width="3"/><path d="M21 11.2a6.2 6.2 0 1 1-10 0" stroke-width="3"/></svg></div>
+        <div class="state"><svg width="16" height="16" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="16" cy="16" r="13.4" opacity="0.28" stroke-width="2.6"/><path d="M16 2.6 A 13.4 13.4 0 1 1 3.26 20.14" stroke-width="2.6"/><path d="M16 9.4v6.2" stroke-width="3"/><path d="M21 11.2a6.2 6.2 0 1 1-10 0" stroke-width="3"/></svg></div>
+      </div>
+      <div class="taskbar dark">
+        <div class="state"><svg width="16" height="16" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="16" cy="16" r="13.4" opacity="0.28" stroke-width="2.6"/><path d="M16 9.4v6.2" stroke-width="3"/><path d="M21 11.2a6.2 6.2 0 1 1-10 0" stroke-width="3"/></svg></div>
+        <div class="state"><svg width="16" height="16" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="16" cy="16" r="13.4" opacity="0.28" stroke-width="2.6"/><path d="M16 2.6 A 13.4 13.4 0 1 1 3.26 20.14" stroke-width="2.6"/><path d="M16 9.4v6.2" stroke-width="3"/><path d="M21 11.2a6.2 6.2 0 1 1-10 0" stroke-width="3"/></svg></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Option B &mdash; Power glyph only, 2.0 stroke (chosen)</h2>
+    <p class="note">
+      The same glyph with slightly heavier strokes and no ring. Simplest to draw and the quietest in the
+      tray, but it looks identical all day, so shutdown proximity is invisible until the panel opens.
+    </p>
+    <div class="row">
+      <div class="state">
+        <svg width="64" height="64" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M16 8.6v7" />
+          <path d="M21.6 10.8a7 7 0 1 1-11.2 0" />
+        </svg>
+        <span class="state-label">32 px detail</span>
+      </div>
+      <div class="state">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M16 8.6v7" />
+          <path d="M21.6 10.8a7 7 0 1 1-11.2 0" />
+        </svg>
+        <span class="state-label">16 px render</span>
+      </div>
+      <div class="taskbar light">
+        <div class="state"><svg width="16" height="16" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16 8.6v7"/><path d="M21.6 10.8a7 7 0 1 1-11.2 0"/></svg></div>
+      </div>
+      <div class="taskbar dark">
+        <div class="state"><svg width="16" height="16" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16 8.6v7"/><path d="M21.6 10.8a7 7 0 1 1-11.2 0"/></svg></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Option C &mdash; Ring only</h2>
+    <p class="note">
+      Pure gauge, closest to the OpenQuota ring. Cleanest at 16 px, but it reads as a generic meter rather
+      than shutdown, and it loses the power identity the app has today.
+    </p>
+    <div class="row">
+      <div class="state">
+        <svg width="64" height="64" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.9" stroke-linecap="round">
+          <circle cx="16" cy="16" r="11.6" opacity="0.28" />
+          <circle cx="16" cy="16" r="11.6" pathLength="100" stroke-dasharray="62 38" transform="rotate(-90 16 16)" />
+        </svg>
+        <span class="state-label">32 px detail</span>
+      </div>
+      <div class="state">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.9" stroke-linecap="round">
+          <circle cx="16" cy="16" r="11.6" opacity="0.28" />
+          <circle cx="16" cy="16" r="11.6" pathLength="100" stroke-dasharray="62 38" transform="rotate(-90 16 16)" />
+        </svg>
+        <span class="state-label">16 px render</span>
+      </div>
+      <div class="taskbar light">
+        <div class="state"><svg width="16" height="16" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.9" stroke-linecap="round"><circle cx="16" cy="16" r="11.6" opacity="0.28"/><circle cx="16" cy="16" r="11.6" pathLength="100" stroke-dasharray="62 38" transform="rotate(-90 16 16)"/></svg></div>
+      </div>
+      <div class="taskbar dark">
+        <div class="state"><svg width="16" height="16" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.9" stroke-linecap="round"><circle cx="16" cy="16" r="11.6" opacity="0.28"/><circle cx="16" cy="16" r="11.6" pathLength="100" stroke-dasharray="62 38" transform="rotate(-90 16 16)"/></svg></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Against today's icon</h2>
+    <p class="note">
+      The current tray icon is a magenta power glyph. Color breaks the monochrome tray convention, and the
+      glyph geometry is heavier than the Windows 11 system icons next to it. The proposals keep the power
+      identity but render in the taskbar's own foreground color, so the icon sits quietly between volume
+      and network regardless of theme.
+    </p>
+    <div class="row">
+      <div class="state">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="#e91e8c" stroke-width="4" stroke-linecap="round">
+          <path d="M16 8v8" />
+          <path d="M22.5 11a8 8 0 1 1-13 0" />
+        </svg>
+        <span class="state-label">Current icon</span>
+      </div>
+      <div class="state">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M16 8.6v7" />
+          <path d="M21.6 10.8a7 7 0 1 1-11.2 0" />
+        </svg>
+        <span class="state-label">Proposed</span>
+      </div>
+      <div class="taskbar light">
+        <div class="state"><svg width="16" height="16" viewBox="0 0 32 32" fill="none" stroke="#e91e8c" stroke-width="4" stroke-linecap="round"><path d="M16 8v8"/><path d="M22.5 11a8 8 0 1 1-13 0"/></svg></div>
+        <div class="state"><svg width="16" height="16" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16 8.6v7"/><path d="M21.6 10.8a7 7 0 1 1-11.2 0"/></svg></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+  document.querySelectorAll('[data-set-theme]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const theme = button.dataset.setTheme;
+      if (theme) document.documentElement.dataset.theme = theme;
+      else delete document.documentElement.dataset.theme;
+      document.querySelectorAll('[data-set-theme]').forEach((b) => {
+        b.setAttribute('aria-pressed', String(b === button));
+      });
+    });
+  });
+</script>
+</body>
+</html>
