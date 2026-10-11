@@ -4,7 +4,7 @@ use tiny_skia::{LineCap, Paint, PathBuilder, Pixmap, Stroke, Transform};
 type Rgb = (u8, u8, u8);
 
 const SIZE: u32 = 32;
-const STROKE: f32 = 2.0;
+const STROKE: f32 = 2.4;
 const CENTER: f32 = 16.0;
 /// Geometry fills the 32px canvas so the 16px tray render stays readable.
 const BAR: (f32, f32, f32, f32) = (16.0, 3.5, 16.0, 16.0);
