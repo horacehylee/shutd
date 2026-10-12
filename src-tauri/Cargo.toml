@@ -1,6 +1,6 @@
 [package]
 name = "shutd"
-version = "2.0.0"
+version = "2.1.0"
 description = "Auto shutdown utility with popup and snooze"
 edition = "2021"
 
