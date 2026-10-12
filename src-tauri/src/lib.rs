@@ -8,7 +8,7 @@ mod toast;
 mod tray;
 mod webview_memory;
 
-use std::sync::{Mutex, mpsc};
+use std::sync::{mpsc, Mutex};
 use std::thread;
 use std::time::Duration;
 
@@ -75,6 +75,7 @@ pub fn run() {
             commands::dismiss_toast,
             commands::set_settings,
             commands::set_autostart,
+            commands::set_panel_screen,
         ])
         .setup(|app| {
             install_tray(app.handle())?;
@@ -188,7 +189,11 @@ fn watch_config(app: AppHandle) {
             return;
         }
     };
-    if let Err(e) = notify::Watcher::watch(&mut watcher, &config::dir(), notify::RecursiveMode::NonRecursive) {
+    if let Err(e) = notify::Watcher::watch(
+        &mut watcher,
+        &config::dir(),
+        notify::RecursiveMode::NonRecursive,
+    ) {
         log::error!("config watch failed: {e}");
         return;
     }

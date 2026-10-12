@@ -224,6 +224,13 @@
     .saved-flag { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
     .saved-flag svg { color: var(--accent); }
     .settings-note { font-size: 12px; color: var(--tertiary); margin: 10px 2px 0; }
+    .day-label { display: flex; align-items: center; gap: 6px; width: 44px; font-size: 13px; font-weight: 600; }
+    .day-label.today { color: var(--accent); }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); visibility: hidden; }
+    .day-label.today .dot { visibility: visible; }
+    .day-controls { display: flex; align-items: center; gap: 6px; }
+    .day-controls input { width: 112px; text-align: center; }
+    .chip { border: 1px solid var(--line); border-radius: 6px; background: var(--tray); color: var(--muted); font: inherit; font-size: 11px; padding: 4px 0; width: 64px; text-align: center; cursor: pointer; white-space: nowrap; }
 
     /* Snooze toast */
     .toast {
@@ -292,7 +299,7 @@
         </div>
         <div class="next-label">Next shutdown</div>
         <div class="next-time">01:00</div>
-        <div class="next-sub">today &middot; in 2 h 47 m</div>
+        <div class="next-sub">Tue &middot; today &middot; in 2 h 47 m</div>
         <div class="card">
           <div class="card-row">
             <span class="label">Day progress</span>
@@ -346,7 +353,7 @@
         </div>
         <div class="next-label">Next shutdown</div>
         <div class="next-time">01:15</div>
-        <div class="next-sub">today &middot; snoozed +15 min</div>
+        <div class="next-sub">Tue &middot; today &middot; snoozed +15 min</div>
         <div class="card">
           <div class="card-row">
             <span class="label">Day progress</span>
@@ -380,8 +387,32 @@
         </div>
         <div class="card">
           <div class="setting-row">
-            <label for="s-time">Shutdown time</label>
-            <input id="s-time" type="time" value="01:00" />
+            <span class="day-label today"><i class="dot"></i>Mon</span>
+            <span class="day-controls"><input type="time" value="01:00" /><button class="chip">+1 day</button></span>
+          </div>
+          <div class="setting-row">
+            <span class="day-label"><i class="dot"></i>Tue</span>
+            <span class="day-controls"><input type="time" value="23:30" /><button class="chip">same day</button></span>
+          </div>
+          <div class="setting-row">
+            <span class="day-label"><i class="dot"></i>Wed</span>
+            <span class="day-controls"><input type="time" value="01:00" /><button class="chip">+1 day</button></span>
+          </div>
+          <div class="setting-row">
+            <span class="day-label"><i class="dot"></i>Thu</span>
+            <span class="day-controls"><input type="time" value="01:00" /><button class="chip">+1 day</button></span>
+          </div>
+          <div class="setting-row">
+            <span class="day-label"><i class="dot"></i>Fri</span>
+            <span class="day-controls"><input type="time" value="01:00" /><button class="chip">+1 day</button></span>
+          </div>
+          <div class="setting-row">
+            <span class="day-label"><i class="dot"></i>Sat</span>
+            <span class="day-controls"><input type="time" value="02:00" /><button class="chip">+1 day</button></span>
+          </div>
+          <div class="setting-row">
+            <span class="day-label"><i class="dot"></i>Sun</span>
+            <span class="day-controls"><input type="time" value="00:30" /><button class="chip">same day</button></span>
           </div>
         </div>
         <div class="card">
@@ -484,7 +515,7 @@
     <h2>Decisions captured in these mockups</h2>
     <ul class="decisions">
       <li><b>Tray icon.</b> Runtime-rendered by tiny-skia; Option B, the bare power glyph at 2.0 stroke, chosen from <code>tray-icon-concept.html</code>.</li>
-      <li><b>Settings in the panel.</b> Shutdown time, snooze interval, notify-before, and toast duration are editable inline and save straight to the config; the YAML file becomes an implementation detail.</li>
+      <li><b>Settings in the panel.</b> Per-weekday shutdown times (each with a same-day / +1-day toggle), snooze interval, notify-before, and toast duration are editable inline and save straight to the config; the YAML file becomes an implementation detail.</li>
       <li><b>Config and log location.</b> Both move to <code>~/.config/shutd</code> (<code>config.yaml</code>, <code>shutd.log</code>), replacing today's dotfiles in the home root. The migration can import an existing <code>~/.shutd.yaml</code> on first run.</li>
       <li><b>Idle memory.</b> When the panel or toast hides, the webview is suspended the way OpenQuota's <code>webview_memory</code> module does, so the app idles close to scheduler-only cost.</li>
     </ul>

@@ -2,7 +2,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::thread;
 use std::time::Duration;
 
-use tauri::{AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, WebviewWindow, WindowEvent};
+use tauri::{
+    AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, WebviewWindow, WindowEvent,
+};
 use tauri_plugin_positioner::{Position, WindowExt};
 
 use crate::webview_memory;
@@ -10,6 +12,7 @@ use crate::webview_memory;
 pub const WINDOW: &str = "main";
 pub const PANEL_WIDTH: f64 = 320.0;
 pub const PANEL_HEIGHT: f64 = 272.0;
+pub const PANEL_SETTINGS_HEIGHT: f64 = 576.0;
 const TOAST_MARGIN: f64 = 16.0;
 const TOAST_BOTTOM_CLEARANCE: f64 = 56.0; // above the taskbar
 const BLUR_DISMISS_DELAY: Duration = Duration::from_millis(100);
@@ -45,14 +48,32 @@ pub fn show_panel(app: &AppHandle) {
     app.state::<DismissGuard>().cancel_pending();
     webview_memory::set_inactive(&w, false);
     let _ = w.set_size(LogicalSize::new(PANEL_WIDTH, PANEL_HEIGHT));
-    if let Err(e) = w.as_ref().window().move_window_constrained(Position::TrayCenter) {
+    if let Err(e) = w
+        .as_ref()
+        .window()
+        .move_window_constrained(Position::TrayCenter)
+    {
         log::warn!("tray positioning failed: {e}; anchoring to bottom-right");
         anchor_bottom_right(&w, PANEL_WIDTH, PANEL_HEIGHT);
     }
     let _ = w.show();
     let _ = w.set_focus();
+    // The frontend drops back to the status screen, matching this size.
+    let _ = app.emit("panel-shown", ());
     // Push fresh state so the panel never shows content from before it hid.
     crate::commands::emit_state(app);
+}
+
+/// Resizes the panel for the active screen and re-anchors it under the tray,
+/// so the settings list fits without scrolling.
+pub fn set_screen(app: &AppHandle, screen: &str) {
+    let Some(w) = window(app) else { return };
+    let height = if screen == "settings" { PANEL_SETTINGS_HEIGHT } else { PANEL_HEIGHT };
+    let _ = w.set_size(LogicalSize::new(PANEL_WIDTH, height));
+    if let Err(e) = w.as_ref().window().move_window_constrained(Position::TrayCenter) {
+        log::warn!("tray positioning failed: {e}; anchoring to bottom-right");
+        anchor_bottom_right(&w, PANEL_WIDTH, height);
+    }
 }
 
 pub fn hide(app: &AppHandle) {
@@ -76,10 +97,8 @@ pub fn anchor_bottom_right(window: &WebviewWindow, width: f64, height: f64) {
     };
     let scale = window.scale_factor().unwrap_or(1.0);
     let x = f64::from(monitor.size().width) / scale - width - TOAST_MARGIN;
-    let y = f64::from(monitor.size().height) / scale
-        - height
-        - TOAST_MARGIN
-        - TOAST_BOTTOM_CLEARANCE;
+    let y =
+        f64::from(monitor.size().height) / scale - height - TOAST_MARGIN - TOAST_BOTTOM_CLEARANCE;
     let _ = window.set_position(LogicalPosition::new(x.max(0.0), y.max(0.0)));
 }
 
@@ -101,7 +120,9 @@ fn schedule_blur_dismiss(app: AppHandle, token: u64) {
         let app_for_dismiss = app.clone();
         let _ = app.run_on_main_thread(move || {
             let guard_current = app_for_dismiss.state::<DismissGuard>().is_current(token);
-            let Some(w) = window(&app_for_dismiss) else { return };
+            let Some(w) = window(&app_for_dismiss) else {
+                return;
+            };
             let still_unfocused = w.is_focused().is_ok_and(|focused| !focused);
             if guard_current && still_unfocused {
                 hide(&app_for_dismiss);

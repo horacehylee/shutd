@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dayLabel, formatClock, humanRemaining, mmss } from './countdown';
+import { dayLabel, formatClock, humanRemaining, mmss, weekdayShort } from './countdown';
 
 const at = (h: number, m: number, s = 0) => {
   const d = new Date(2026, 9, 11, h, m, s);
@@ -33,6 +33,14 @@ describe('dayLabel', () => {
   it('distinguishes today from tomorrow', () => {
     expect(dayLabel(at(23, 0), at(22, 13))).toBe('today');
     expect(dayLabel(new Date(2026, 9, 12, 1, 0), at(22, 13))).toBe('tomorrow');
+  });
+});
+
+describe('weekdayShort', () => {
+  it('names the weekday', () => {
+    // 2026-10-11 is a Sunday.
+    expect(weekdayShort(at(22, 13))).toBe('Sun');
+    expect(weekdayShort(new Date(2026, 9, 12, 1, 0))).toBe('Mon');
   });
 });
 

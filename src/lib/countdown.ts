@@ -28,4 +28,13 @@ export function dayLabel(shutdownAt: Date, now: Date): string {
   return day(shutdownAt) === day(now) ? 'today' : 'tomorrow';
 }
 
+/** Weekday labels indexed Monday-first, matching the backend's rule order. */
+export const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+export function weekdayShort(date: Date): string {
+  return DAY_NAMES[date.getDay()];
+}
+
 /** Fraction of the day elapsed toward the shutdown time, 0-100. */

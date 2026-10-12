@@ -7,10 +7,12 @@
     setAutostart,
     setSettings,
     snooze,
+    setPanelScreen,
     type ConfigInput,
     type ShutdState,
+    type WeekdayRule,
   } from './lib/backend';
-  import { dayLabel, formatClock, humanRemaining } from './lib/countdown';
+  import { dayLabel, formatClock, humanRemaining, WEEKDAY_LABELS, weekdayShort } from './lib/countdown';
 
   let state = $state<ShutdState | null>(null);
   let screen = $state<'status' | 'settings'>('status');
@@ -22,6 +24,8 @@
   const remaining = $derived(shutdownAt ? shutdownAt.getTime() - now : 0);
   const toast = $derived(state?.toast ?? null);
   const toastLeft = $derived(toast ? new Date(toast.dismissAt).getTime() - now : 0);
+  // Backend weekday rules are Monday-first.
+  const todayIndex = $derived((new Date(now).getDay() + 6) % 7);
   // The toast window loads the same bundle with ?view=toast; the panel is
   // everything else.
   const isToast = new URLSearchParams(window.location.search).get('view') === 'toast';
@@ -31,6 +35,9 @@
     listen<ShutdState>('state-changed', (event) => applyState(event.payload)).then((u) => {
       unlisten = u;
     });
+    // Reopening the panel always lands on the status screen, matching the
+    // window size show_panel set.
+    listen('panel-shown', () => (screen = 'status')).catch(console.error);
     getState().then(applyState).catch(console.error);
     const timer = setInterval(() => (now = Date.now()), 1000);
     return () => {
@@ -46,6 +53,7 @@
       startTime: next.settings.startTime,
       snoozeInterval: next.settings.snoozeInterval,
       notification: { before: next.settings.before, duration: next.settings.duration },
+      weekdays: next.settings.weekdays,
     };
   }
 
@@ -65,15 +73,29 @@
     }
   }
 
-  function saveField(field: 'startTime' | 'snoozeInterval' | 'before' | 'duration', value: string) {
+  function saveField(field: 'snoozeInterval' | 'before' | 'duration', value: string) {
     if (!form) return;
     const next: ConfigInput = { ...form, notification: { ...form.notification } };
-    if (field === 'startTime') next.startTime = value;
-    else if (field === 'snoozeInterval') next.snoozeInterval = Number(value);
+    if (field === 'snoozeInterval') next.snoozeInterval = Number(value);
     else if (field === 'before') next.notification.before = Number(value);
     else next.notification.duration = Number(value);
     form = next;
     setSettings(next).then(applyState).catch((error) => console.error('save failed', error));
+  }
+
+  function saveWeekdays(weekdays: WeekdayRule[]) {
+    if (!form) return;
+    const next: ConfigInput = { ...form, weekdays };
+    form = next;
+    setSettings(next).then(applyState).catch((error) => console.error('save failed', error));
+  }
+
+  function setWeekdayTime(index: number, time: string) {
+    saveWeekdays(form!.weekdays.map((day, i) => (i === index ? { ...day, time } : day)));
+  }
+
+  function toggleWeekday(index: number) {
+    saveWeekdays(form!.weekdays.map((day, i) => (i === index ? { ...day, nextDay: !day.nextDay } : day)));
   }
 
   function toggleAutostart() {
@@ -83,6 +105,11 @@
       autostart = !next;
       console.error(error);
     });
+  }
+
+  function showScreen(next: 'status' | 'settings') {
+    screen = next;
+    setPanelScreen(next).catch((error) => console.error(error));
   }
 
   // The toast countdown hitting zero dismisses the toast; the shutdown
@@ -120,16 +147,26 @@
 {:else if screen === 'settings' && form}
   <main class="panel">
     <header>
-      <button class="icon-btn" aria-label="Back" onclick={() => (screen = 'status')}>
+      <button class="icon-btn" aria-label="Back" onclick={() => showScreen('status')}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
       </button>
       <h3>Settings</h3>
     </header>
-    <div class="card">
-      <div class="row">
-        <label for="start-time">Shutdown time</label>
-        <input id="start-time" type="time" value={form.startTime} onchange={(e) => saveField('startTime', e.currentTarget.value)} />
-      </div>
+    <div class="card days">
+      {#each form.weekdays as day, i}
+        <div class="row">
+          <span class="day-label" class:today={i === todayIndex}>
+            <i class="dot"></i>
+            {WEEKDAY_LABELS[i]}
+          </span>
+          <span class="day-controls">
+            <input aria-label={`${WEEKDAY_LABELS[i]} shutdown time`} type="time" value={day.time} onchange={(e) => setWeekdayTime(i, e.currentTarget.value)} />
+            <button class="chip" title={day.nextDay ? `Fires ${WEEKDAY_LABELS[(i + 1) % 7]} at this time` : `Fires ${WEEKDAY_LABELS[i]} at this time`} onclick={() => toggleWeekday(i)}>
+              {day.nextDay ? '+1 day' : 'same day'}
+            </button>
+          </span>
+        </div>
+      {/each}
     </div>
     <div class="card">
       <div class="row">
@@ -164,14 +201,14 @@
     <header>
       <h3>Shutd</h3>
       <span class="spacer"></span>
-      <button class="icon-btn" aria-label="Settings" onclick={() => (screen = 'settings')}>
+      <button class="icon-btn" aria-label="Settings" onclick={() => showScreen('settings')}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
       </button>
     </header>
     <div class="label">Next shutdown</div>
     <div class="time">{formatClock(shutdownAt)}</div>
     <div class="sub">
-      {dayLabel(shutdownAt, new Date(now))} &middot; in {humanRemaining(remaining)}{#if state.snoozed > 0}&middot; snoozed +{state.settings.snoozeInterval} min{/if}
+      {weekdayShort(new Date(now))} &middot; {dayLabel(shutdownAt, new Date(now))} &middot; in {humanRemaining(remaining)}{#if state.snoozed > 0}&middot; snoozed +{state.settings.snoozeInterval} min{/if}
     </div>
     <div class="card">
       {#if state.snoozed > 0}
@@ -268,6 +305,10 @@
     margin-bottom: 8px;
   }
 
+  .days .row + .row {
+    margin-top: 6px;
+  }
+
   .row {
     display: flex;
     justify-content: space-between;
@@ -287,6 +328,60 @@
   .value {
     font-size: 12px;
     color: var(--muted);
+  }
+
+  .day-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 44px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .day-label.today {
+    color: var(--accent);
+  }
+
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    visibility: hidden;
+  }
+
+  .day-label.today .dot {
+    visibility: visible;
+  }
+
+  .day-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .day-controls input[type='time'] {
+    width: 112px;
+    text-align: center;
+  }
+
+  .chip {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--tray);
+    color: var(--muted);
+    font-size: 11px;
+    width: 64px;
+    padding: 4px 0;
+    text-align: center;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .chip:hover {
+    color: var(--ink);
+    background: var(--button-hover);
   }
 
   .meter {

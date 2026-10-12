@@ -1,7 +1,29 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use chrono::NaiveTime;
 use serde::{Deserialize, Serialize};
+
+/// Times before this hour belong to the previous day's session and fire on
+/// the next calendar date unless the user overrides `nextDay`.
+const MORNING_BOUNDARY: &str = "06:00";
+
+/// Per-weekday shutdown rule; index 0 is Monday.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct WeekdayRule {
+    pub time: String,
+    pub next_day: bool,
+}
+
+impl Default for WeekdayRule {
+    fn default() -> Self {
+        Self {
+            time: "01:00".into(),
+            next_day: true,
+        }
+    }
+}
 
 /// App configuration, stored at ~/.config/shutd/config.yaml.
 /// Field names match the legacy ~/.shutd.yaml keys so old files migrate as-is.
@@ -13,6 +35,9 @@ pub struct Config {
     #[serde(alias = "snoozeinterval")]
     pub snooze_interval: u32,
     pub notification: Notification,
+    /// Always 7 entries after loading; empty means "derive from start_time".
+    #[serde(default)]
+    pub weekdays: Vec<WeekdayRule>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -24,14 +49,42 @@ pub struct Notification {
 
 impl Default for Config {
     fn default() -> Self {
+        Self::with_start_time("01:00")
+    }
+}
+
+impl Config {
+    /// Daily schedule expressed as seven identical weekday slots; used for
+    /// legacy configs and tests.
+    pub fn with_start_time(start_time: &str) -> Self {
         Self {
-            start_time: "01:00".into(),
+            start_time: start_time.into(),
             snooze_interval: 15,
-            notification: Notification {
-                before: 10,
-                duration: 10,
-            },
+            notification: Notification::default(),
+            weekdays: derive_weekdays(start_time),
         }
+    }
+}
+
+/// Legacy single-time behavior as seven identical weekday slots. Early
+/// morning times count as the next day by default.
+fn derive_weekdays(start_time: &str) -> Vec<WeekdayRule> {
+    let next_day = default_next_day(start_time);
+    (0..7)
+        .map(|_| WeekdayRule {
+            time: start_time.into(),
+            next_day,
+        })
+        .collect()
+}
+
+fn default_next_day(time: &str) -> bool {
+    match (
+        NaiveTime::parse_from_str(time, "%H:%M"),
+        NaiveTime::parse_from_str(MORNING_BOUNDARY, "%H:%M"),
+    ) {
+        (Ok(t), Ok(boundary)) => t < boundary,
+        _ => true,
     }
 }
 
@@ -97,7 +150,15 @@ pub fn parse(yaml: &str) -> Result<Config, String> {
     if yaml.trim().is_empty() {
         return Ok(Config::default());
     }
-    serde_yaml::from_str(yaml).map_err(|e| format!("invalid config: {e}"))
+    let mut config: Config =
+        serde_yaml::from_str(yaml).map_err(|e| format!("invalid config: {e}"))?;
+    if config.weekdays.is_empty() {
+        config.weekdays = derive_weekdays(&config.start_time);
+    }
+    if config.weekdays.len() != 7 {
+        return Err("invalid config: weekdays must have 7 entries".into());
+    }
+    Ok(config)
 }
 
 pub fn save(config: &Config) -> Result<(), String> {
@@ -111,7 +172,8 @@ mod tests {
 
     #[test]
     fn parses_legacy_keys() {
-        let yaml = "startTime: \"02:30\"\nsnoozeInterval: 5\nnotification:\n  before: 3\n  duration: 7\n";
+        let yaml =
+            "startTime: \"02:30\"\nsnoozeInterval: 5\nnotification:\n  before: 3\n  duration: 7\n";
         let config = parse(yaml).unwrap();
         assert_eq!(
             config,
@@ -121,9 +183,12 @@ mod tests {
                 notification: Notification {
                     before: 3,
                     duration: 7
-                }
+                },
+                weekdays: derive_weekdays("02:30"),
             }
         );
+        // 02:30 is before the morning boundary, so it defaults to next day.
+        assert!(config.weekdays[0].next_day);
     }
 
     #[test]
@@ -151,5 +216,33 @@ mod tests {
         let yaml = serde_yaml::to_string(&config).unwrap();
         assert!(yaml.contains("startTime:"));
         assert_eq!(parse(&yaml).unwrap(), config);
+    }
+
+    #[test]
+    fn derives_weekdays_from_legacy_start_time() {
+        let config = parse("startTime: \"23:30\"\n").unwrap();
+        assert_eq!(config.weekdays.len(), 7);
+        assert!(!config.weekdays[0].next_day, "23:30 stays on the same day");
+        let early = parse("startTime: \"01:00\"\n").unwrap();
+        assert!(early.weekdays[0].next_day, "01:00 crosses to the next day");
+    }
+
+    #[test]
+    fn parses_per_weekday_rules() {
+        let yaml = "weekdays:\n  - { time: \"01:00\", nextDay: true }\n  - { time: \"23:00\", nextDay: false }\n  - { time: \"01:00\", nextDay: true }\n  - { time: \"01:00\", nextDay: true }\n  - { time: \"01:00\", nextDay: true }\n  - { time: \"02:00\", nextDay: true }\n  - { time: \"00:30\", nextDay: false }\n";
+        let config = parse(yaml).unwrap();
+        assert_eq!(config.weekdays[1].time, "23:00");
+        assert!(!config.weekdays[1].next_day);
+        assert_eq!(config.weekdays[6].time, "00:30");
+        assert!(
+            !config.weekdays[6].next_day,
+            "explicit same-day override wins"
+        );
+    }
+
+    #[test]
+    fn rejects_wrong_weekday_count() {
+        let yaml = "weekdays:\n  - { time: \"01:00\", nextDay: true }\n";
+        assert!(parse(yaml).is_err());
     }
 }

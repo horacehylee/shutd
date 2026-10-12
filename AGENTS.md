@@ -12,7 +12,7 @@ app; the Go code is gone.
   compatibility (its `bin/pnpm.cjs` is gone) and `corepack pnpm` fails with
   every pnpm 12 release.
 - Dev with live reload: `corepack pnpm tauri dev` (vite serves 127.0.0.1:1420).
-- Release binary: `corepack pnpm tauri build -- --no-bundle`, output at
+- Release binary: `corepack pnpm tauri build --no-bundle`, output at
   `src-tauri/target/release/shutd.exe`.
 - Plain cargo release must enable the custom-protocol feature, or the exe
   loads the dev server instead of the bundled frontend:

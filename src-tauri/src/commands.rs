@@ -3,8 +3,8 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_autostart::ManagerExt as AutostartExt;
 
-use crate::config::Config;
-use crate::{config, scheduler, toast, AppState};
+use crate::config::{Config, WeekdayRule};
+use crate::{config, panel, scheduler, toast, AppState};
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -20,6 +20,7 @@ pub struct SettingsPayload {
     pub before: u32,
     pub duration: u32,
     pub autostart: bool,
+    pub weekdays: Vec<WeekdayRule>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -39,13 +40,16 @@ pub fn build_payload(app: &AppHandle) -> StatePayload {
     StatePayload {
         shutdown_at: schedule.shutdown_at,
         snoozed: schedule.snoozed,
-        toast: schedule.toast.map(|t| ToastPayload { dismiss_at: t.dismiss_at }),
+        toast: schedule.toast.map(|t| ToastPayload {
+            dismiss_at: t.dismiss_at,
+        }),
         settings: SettingsPayload {
             start_time: config.start_time,
             snooze_interval: config.snooze_interval,
             before: config.notification.before,
             duration: config.notification.duration,
             autostart,
+            weekdays: config.weekdays,
         },
     }
 }
@@ -54,7 +58,10 @@ pub fn build_payload(app: &AppHandle) -> StatePayload {
 pub fn emit_state(app: &AppHandle) -> StatePayload {
     let payload = build_payload(app);
     if let Some(menu) = app.try_state::<crate::TrayMenu>() {
-        let _ = menu.next.set_text(format!("Shutdown at {}", payload.shutdown_at.format("%H:%M")));
+        let _ = menu.next.set_text(format!(
+            "Shutdown {}",
+            payload.shutdown_at.format("%a %H:%M")
+        ));
     }
     let _ = app.emit("state-changed", &payload);
     payload
@@ -73,7 +80,10 @@ pub fn snooze(app: AppHandle) -> StatePayload {
         let mut schedule = state.schedule.lock().expect("schedule lock");
         schedule.snooze(&config);
     }
-    log::info!("snoozed, shutdown at {}", build_payload(&app).shutdown_at.format("%H:%M"));
+    log::info!(
+        "snoozed, shutdown at {}",
+        build_payload(&app).shutdown_at.format("%H:%M")
+    );
     toast::hide(&app);
     emit_state(&app)
 }
@@ -97,6 +107,10 @@ pub fn dismiss_toast(app: AppHandle) -> StatePayload {
 #[tauri::command]
 pub fn set_settings(app: AppHandle, config: Config) -> Result<StatePayload, String> {
     scheduler::parse_time(&config.start_time)?;
+    config
+        .weekdays
+        .iter()
+        .try_for_each(|day| scheduler::parse_time(&day.time).map(|_| ()))?;
     config::save(&config)?;
     {
         let state = app.state::<AppState>();
@@ -120,4 +134,10 @@ pub fn set_autostart(app: AppHandle, enabled: bool) -> Result<(), String> {
         launcher.disable()
     }
     .map_err(|e| e.to_string())
+}
+
+/// Matches the panel window to the active screen; see panel::set_screen.
+#[tauri::command]
+pub fn set_panel_screen(app: AppHandle, screen: String) {
+    panel::set_screen(&app, &screen);
 }
