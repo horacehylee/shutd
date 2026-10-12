@@ -21,7 +21,11 @@ pub fn render_glyph(light_taskbar: bool) -> Image<'static> {
     let mut pixmap = Pixmap::new(SIZE, SIZE).expect("tray icon dimensions are valid");
 
     let (bar_x, bar_top, _, bar_bottom) = BAR;
-    stroke(&mut pixmap, foreground, &[(bar_x, bar_top), (bar_x, bar_bottom)]);
+    stroke(
+        &mut pixmap,
+        foreground,
+        &[(bar_x, bar_top), (bar_x, bar_bottom)],
+    );
     stroke(&mut pixmap, foreground, &arc_points());
 
     Image::new_owned(pixmap.take_demultiplied(), SIZE, SIZE)
@@ -80,9 +84,16 @@ fn stroke(pixmap: &mut Pixmap, color: Rgb, points: &[(f32, f32)]) {
 pub fn taskbar_uses_light_theme() -> bool {
     #[cfg(target_os = "windows")]
     {
-        use windows_sys::Win32::System::Registry::{RegGetValueW, HKEY_CURRENT_USER, RRF_RT_REG_DWORD};
+        use windows_sys::Win32::System::Registry::{
+            RegGetValueW, HKEY_CURRENT_USER, RRF_RT_REG_DWORD,
+        };
 
-        let wide = |value: &str| value.encode_utf16().chain(std::iter::once(0)).collect::<Vec<_>>();
+        let wide = |value: &str| {
+            value
+                .encode_utf16()
+                .chain(std::iter::once(0))
+                .collect::<Vec<_>>()
+        };
         let subkey = wide("Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize");
         let value_name = wide("SystemUsesLightTheme");
         let mut value = 0_u32;

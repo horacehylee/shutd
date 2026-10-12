@@ -43,8 +43,10 @@ pub fn init(path: &Path) -> Result<(), String> {
         .append(true)
         .open(path)
         .map_err(|e| format!("failed to open {}: {e}", path.display()))?;
-    log::set_boxed_logger(Box::new(FileLogger { file: Mutex::new(file) }))
-        .map_err(|e| e.to_string())?;
+    log::set_boxed_logger(Box::new(FileLogger {
+        file: Mutex::new(file),
+    }))
+    .map_err(|e| e.to_string())?;
     log::set_max_level(log::LevelFilter::Info);
     Ok(())
 }
